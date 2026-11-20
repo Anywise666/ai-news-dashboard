@@ -12,7 +12,7 @@
 ## 预览方式
 
 - 本地:直接用浏览器打开对应 `.html` 文件。
-- 在线:本仓库已开启 GitHub Pages,访问 `https://anywise666.github.io/ai-news-dashboard/` 查看首页。
+- 在线:访问 `https://anywise666.github.io/ai-news-dashboard/` 查看首页(GitHub Pages)。
 
 ## 技术说明
 
