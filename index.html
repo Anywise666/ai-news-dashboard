@@ -211,7 +211,7 @@
   }
   function ymdOf(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
   function parseYmd(s){return new Date(s+'T00:00:00+08:00');}
-  function cut(t,n){if(!t)return'';var a=[...t];return a.length<=n?t:a.slice(0,n-1).join('\u2026');}
+  function cut(t,n){if(!t)return'';var a=[...t];return a.length<=n?t:a.slice(0,n-1).join('')+'\u2026';}
   function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e;}
 
   function hotScore(title, para){
