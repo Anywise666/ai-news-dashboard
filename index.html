@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI 晨报 · 日历档案</title>
-<meta name="wb-version" content="2026-11-20-3-calendar-fixed2">
+<meta name="wb-version" content="2026-11-20-4-podcast">
 <style>
   :root{
     --bg:#0b0f1a; --card:rgba(255,255,255,.045);
@@ -108,6 +108,26 @@
   .sum{font-size:14px;color:var(--mut);flex:1}
   .more{font-size:13px;font-weight:600;color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:5px;width:fit-content}
   .more:hover{text-decoration:underline}
+  .card-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:2px}
+  .listen{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;cursor:pointer;
+    color:#0b0f1a;background:linear-gradient(135deg,#38bdf8,#818cf8);border:none;border-radius:999px;
+    padding:7px 13px;transition:transform .15s,box-shadow .15s,opacity .15s;white-space:nowrap}
+  .listen:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(56,189,248,.35)}
+  .listen:disabled{opacity:.55;cursor:not-allowed;transform:none;box-shadow:none}
+  .listen .ico{font-size:12px}
+  .listen.playing{background:linear-gradient(135deg,#fb7185,#f59e0b);animation:pulse 1.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(251,113,133,.5)}50%{box-shadow:0 0 0 8px rgba(251,113,133,0)}}
+  .lead-card .listen{margin-top:12px}
+  .podcast-tip{font-size:12px;color:var(--mut);opacity:.85}
+  .audio-bar{position:sticky;bottom:14px;z-index:50;max-width:760px;margin:18px auto 0;
+    background:rgba(20,26,44,.97);border:1px solid rgba(56,189,248,.35);border-radius:14px;
+    padding:12px 16px;display:none;align-items:center;gap:12px;box-shadow:0 10px 34px rgba(0,0,0,.5)}
+  .audio-bar.show{display:flex}
+  .audio-bar .ab-ico{font-size:20px}
+  .audio-bar .ab-info{flex:1;min-width:0}
+  .audio-bar .ab-title{font-size:13px;font-weight:700;color:#dce6ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .audio-bar .ab-phase{font-size:12px;color:var(--mut);margin-top:2px}
+  .audio-bar button{background:var(--accent);color:#0b0f1a;border:none;border-radius:9px;padding:7px 14px;font-weight:700;cursor:pointer;white-space:nowrap}
   .lead-card{background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(255,255,255,.03));
     border:1px solid rgba(251,191,36,.3);border-radius:16px;padding:20px 22px;margin:0 0 8px}
   .lead-card .lk{font-size:12px;color:var(--hot);font-weight:700;letter-spacing:.1em}
@@ -167,6 +187,15 @@
     <div class="state"><div class="spinner"></div>正在加载 AI 晨报…</div>
   </main>
   <footer class="foot" id="foot"></footer>
+</div>
+
+<div class="audio-bar" id="audioBar">
+  <span class="ab-ico" id="abIco">🎧</span>
+  <div class="ab-info">
+    <div class="ab-title" id="abTitle"></div>
+    <div class="ab-phase" id="abPhase"></div>
+  </div>
+  <button id="abStop">停止</button>
 </div>
 
 <script>
@@ -235,6 +264,84 @@
     return fetch(BASE + path, {cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});
   }
 
+  // ===== 英文原标题映射（近7天 items，链接 -> originalTitle）=====
+  var EN_MAP = {};          // aihot item id -> 英文原题
+  function itemIdFromUrl(url){
+    if(!url) return '';
+    var m=String(url).match(/\/items\/([a-z0-9]+)/i);
+    return m?m[1]:'';
+  }
+  async function loadEnTitles(){
+    // items 接口仅覆盖近7天，limit 上限 100
+    var j=await fetchJson('/items?limit=100');
+    if(!j || !j.items) return;
+    j.items.forEach(function(it){
+      var id=itemIdFromUrl((it.links&&it.links.aihot)||'') || it.id;
+      if(id && it.originalTitle) EN_MAP[id]=it.originalTitle;
+    });
+  }
+  function enTitleOf(url){ return EN_MAP[itemIdFromUrl(url)] || ''; }
+
+  // ===== 播客引擎（Web Speech API，中英双语串读）=====
+  var POD = { speaking:false, key:null, queue:[], idx:0, btn:null };
+  function pickVoice(langPrefix){
+    if(!('speechSynthesis' in window)) return null;
+    var vs=window.speechSynthesis.getVoices()||[];
+    var byLang=vs.filter(function(v){return (v.lang||'').toLowerCase().indexOf(langPrefix)===0;});
+    return byLang[0]||null;
+  }
+  function stopPod(){
+    if('speechSynthesis' in window) window.speechSynthesis.cancel();
+    POD.speaking=false; POD.queue=[]; POD.idx=0; POD.key=null; POD.btn=null;
+    document.getElementById('audioBar').classList.remove('show');
+    document.querySelectorAll('.listen.playing').forEach(function(b){b.classList.remove('playing');b.innerHTML='<span class="ico">▶</span> 听播客';});
+  }
+  function speakQueue(key, btn, title, parts){
+    if(POD.speaking && POD.key===key){ stopPod(); return; }
+    if(!('speechSynthesis' in window)){ alert('当前浏览器不支持语音朗读，建议使用 Chrome / Edge / Safari。'); return; }
+    stopPod();
+    POD.speaking=true; POD.key=key; POD.queue=parts; POD.idx=0; POD.btn=btn;
+    if(btn){ btn.classList.add('playing'); btn.innerHTML='<span class="ico">⏸</span> 播放中'; }
+    var bar=document.getElementById('audioBar');
+    document.getElementById('abTitle').textContent=title;
+    bar.classList.add('show');
+
+    function next(){
+      if(POD.idx>=POD.queue.length){ stopPod(); return; }
+      var item=POD.queue[POD.idx];
+      document.getElementById('abIco').textContent=item.lang.indexOf('zh')===0?'🇨🇳':'🇬🇧';
+      document.getElementById('abPhase').textContent='('+(POD.idx+1)+'/'+POD.queue.length+') '+(item.lang.indexOf('zh')===0?'中文':'English')+' · '+item.label;
+      var u=new SpeechSynthesisUtterance(item.text);
+      u.lang=item.lang;
+      var voice=pickVoice(item.lang.indexOf('zh')===0?'zh':'en');
+      if(voice) u.voice=voice;
+      u.rate=item.lang.indexOf('zh')===0?1.0:0.92;
+      u.pitch=1.0; u.volume=1.0;
+      u.onend=function(){ POD.idx++; next(); };
+      u.onerror=function(){ POD.idx++; next(); };
+      window.speechSynthesis.speak(u);
+    }
+    next();
+  }
+  function makePodcast(title, summary, enTitle){
+    var parts=[];
+    if(title) parts.push({text:title+(summary?'。'+summary:''),lang:'zh-CN',label:'朗读标题与摘要'});
+    if(enTitle) parts.push({text:enTitle,lang:'en-US',label:'Original headline'});
+    return parts;
+  }
+  function listenBtn(title, summary, enTitle){
+    var b=document.createElement('button');
+    b.className='listen';
+    b.innerHTML='<span class="ico">▶</span> 听播客';
+    b.title=enTitle?('双语：中文摘要 + 英文原题'):('中文朗读（该条暂无英文原题）');
+    b.onclick=function(e){
+      e.preventDefault(); e.stopPropagation();
+      var key=title+'|'+summary;
+      speakQueue(key, b, title, makePodcast(title,summary,enTitle));
+    };
+    return b;
+  }
+
   var INDEX = {};          // date -> {date, leadTitle, leadParagraph, score, hot}
   var STATE = {            // 当前 UI 状态
     viewYear:0, viewMonth:0,
@@ -266,7 +373,8 @@
       var key=matchKey(sec.label||""); if(!key) return;
       (sec.items||[]).forEach(function(it){
         var links=it.links||{};
-        buckets[key].push({title:it.title||"",source:(it.source&&it.source.name)||"未知来源",summary:it.summary||"",url:links.original||links.aihot});
+        var aihotUrl=links.aihot||'';
+        buckets[key].push({title:it.title||"",source:(it.source&&it.source.name)||"未知来源",summary:it.summary||"",url:links.original||aihotUrl,aihotUrl:aihotUrl,en:enTitleOf(aihotUrl)});
       });
     });
     var ordered=[];
@@ -374,7 +482,11 @@
       if(lurl){ la.href=lurl; la.target='_blank'; la.rel='noopener noreferrer'; }
       else { la.href='#'; la.onclick=function(e){e.preventDefault();}; la.style.cursor='default'; la.title='暂无原文链接'; }
       h3.appendChild(la); lc.appendChild(h3);
-      if(report.lead.leadParagraph) lc.appendChild(el('p',null,cut(report.lead.leadParagraph,120)));
+      var leadPara=report.lead.leadParagraph||'';
+      if(leadPara) lc.appendChild(el('p',null,cut(leadPara,120)));
+      var leadEn=enTitleOf(lurl);
+      var leadListen=listenBtn(report.lead.title, leadPara, leadEn);
+      lc.appendChild(leadListen);
       main.appendChild(lc);
     }
     var n=0;
@@ -390,7 +502,11 @@
         var h=el('h3'); var lk=document.createElement('a'); lk.textContent=it.title; lk.href=it.url||'#';
         lk.target='_blank'; lk.rel='noopener noreferrer'; h.appendChild(lk); card.appendChild(h);
         card.appendChild(el('p','sum',cut(it.summary,60)));
-        var mr=el('a','more','阅读全文 →'); mr.href=it.url||'#'; mr.target='_blank'; mr.rel='noopener noreferrer'; card.appendChild(mr);
+        var actions=el('div','card-actions');
+        var mr=el('a','more','阅读全文 →'); mr.href=it.url||'#'; mr.target='_blank'; mr.rel='noopener noreferrer';
+        actions.appendChild(mr);
+        actions.appendChild(listenBtn(it.title, it.summary, it.en));
+        card.appendChild(actions);
         grid.appendChild(card);
       });
       sec.appendChild(grid); main.appendChild(sec);
@@ -416,6 +532,7 @@
   }
 
   async function selectDate(date, force){
+    stopPod();
     STATE.selectedDate=date;
     var d=parseYmd(date);
     STATE.viewYear=d.getFullYear(); STATE.viewMonth=d.getMonth();
@@ -432,12 +549,17 @@
   document.getElementById('prevM').onclick=function(){moveMonth(-1);};
   document.getElementById('nextM').onclick=function(){moveMonth(1);};
   document.getElementById('todayBtn').onclick=function(){ selectDate(STATE.today); };
+  document.getElementById('abStop').onclick=function(){ stopPod(); };
+  window.addEventListener('beforeunload', function(){ if('speechSynthesis' in window) window.speechSynthesis.cancel(); });
 
   async function init(){
     document.getElementById('calStatus').textContent='正在载入历史索引…';
     showMainLoading('正在加载 AI 晨报档案…');
+    // 英文原题映射与索引并行加载，不阻塞主流程
+    var enPromise=loadEnTitles().catch(function(){});
     try{
       await loadIndex();
+      await enPromise;
       document.getElementById('calStatus').textContent='已载入 '+Object.keys(INDEX).length+' 天档案';
       // 默认今日；今日无数据则回退到索引里最近的一天
       var target=STATE.today;
