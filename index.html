@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI 晨报 · 每日自动更新</title>
-<meta name="wb-version" content="2026-11-20-2">
+<title>AI 晨报 · 日历档案</title>
+<meta name="wb-version" content="2026-11-20-3-calendar">
 <style>
   :root{
     --bg:#0b0f1a; --card:rgba(255,255,255,.045);
     --line:rgba(255,255,255,.09); --txt:#e8edf7; --mut:#9aa6bf;
-    --accent:#6ea8fe;
+    --accent:#6ea8fe; --hot:#fbbf24;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
@@ -24,90 +24,147 @@
   .hero{position:relative;overflow:hidden;
     background:linear-gradient(135deg,rgba(110,168,254,.16),rgba(167,139,250,.10));
     border:1px solid var(--line);border-radius:22px;
-    padding:38px 34px;margin:28px 0 18px;}
+    padding:34px 34px;margin:28px 0 18px;}
   .hero .kicker{font-size:13px;letter-spacing:.18em;color:var(--mut);text-transform:uppercase}
-  .hero h1{font-size:clamp(26px,4.5vw,44px);font-weight:800;margin:6px 0 4px;
+  .hero h1{font-size:clamp(26px,4.5vw,42px);font-weight:800;margin:6px 0 4px;
     background:linear-gradient(90deg,#fff,#bcd0ff);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .hero .sub{color:var(--mut);font-size:15px}
+  .hero .sub{color:var(--mut);font-size:14px}
   .badge{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;
     background:rgba(52,211,153,.18);color:#34d399;border:1px solid rgba(52,211,153,.35);margin-left:8px;vertical-align:middle}
   .badge.old{background:rgba(251,191,36,.16);color:#fbbf24;border-color:rgba(251,191,36,.35)}
-  .hero .total{display:inline-flex;align-items:baseline;gap:8px;margin-top:18px;
-    background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:14px;padding:12px 18px}
-  .hero .total b{font-size:34px;font-weight:800;color:#fff}
-  .hero .total span{color:var(--mut);font-size:14px}
-  .stats{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px}
+  .hero .total{display:inline-flex;align-items:baseline;gap:8px;margin-top:16px;
+    background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:14px;padding:10px 16px}
+  .hero .total b{font-size:30px;font-weight:800;color:#fff}
+  .hero .total span{color:var(--mut);font-size:13px}
+  .stats{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px}
   .stat{display:flex;align-items:center;gap:9px;background:rgba(0,0,0,.22);
-    border:1px solid var(--line);border-radius:12px;padding:9px 14px;font-size:14px}
+    border:1px solid var(--line);border-radius:12px;padding:8px 13px;font-size:13px}
   .stat .dot{width:10px;height:10px;border-radius:50%}
-  .stat b{font-size:17px;font-weight:700}
+  .stat b{font-size:16px;font-weight:700}
   .stat .lbl{color:var(--mut)}
+
+  .cal{background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:20px 22px;margin:18px 0 26px}
+  .cal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+  .cal-title{font-size:17px;font-weight:800}
+  .cal-title small{font-size:12px;color:var(--mut);font-weight:400;margin-left:8px}
+  .cal-ctrls{display:flex;align-items:center;gap:8px}
+  .cal-ctrls button{background:rgba(255,255,255,.05);color:var(--txt);border:1px solid var(--line);
+    border-radius:9px;padding:6px 12px;font-size:13px;cursor:pointer;transition:.15s}
+  .cal-ctrls button:hover{background:rgba(255,255,255,.12)}
+  .cal-ctrls .ym{min-width:104px;text-align:center;font-weight:700;font-size:15px}
+  .cal-ctrls .today-btn{color:var(--accent);border-color:rgba(110,168,254,.4)}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .cal-dow{text-align:center;font-size:12px;color:var(--mut);padding:4px 0 8px}
+  .cal-cell{position:relative;aspect-ratio:1/1;min-height:38px;border-radius:10px;
+    border:1px solid transparent;background:rgba(255,255,255,.035);cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    transition:.15s;color:var(--txt);padding:0}
+  .cal-cell:hover:not(.empty){background:rgba(255,255,255,.12);border-color:var(--line)}
+  .cal-cell.empty{background:transparent;cursor:default}
+  .cal-cell .d{font-size:14px;font-weight:600;line-height:1}
+  .cal-cell.no-data{opacity:.32;cursor:default}
+  .cal-cell.has-data{color:#dce6ff}
+  .cal-cell.hot{background:rgba(251,191,36,.16);border-color:rgba(251,191,36,.45)}
+  .cal-cell.hot .d{color:#fbbf24}
+  .cal-cell.selected{background:var(--accent);border-color:var(--accent);color:#0b0f1a;
+    box-shadow:0 0 0 2px rgba(110,168,254,.3)}
+  .cal-cell.selected .d,.cal-cell.selected .hl-dot{color:#0b0f1a}
+  .cal-cell .hl-dot{position:absolute;bottom:5px;width:5px;height:5px;border-radius:50%;background:var(--hot)}
+  .cal-cell.selected .hl-dot{background:#0b0f1a}
+  .cal-cell .lead-tip{display:none}
+  .cal-legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:14px;font-size:12px;color:var(--mut);align-items:center}
+  .cal-legend .li{display:inline-flex;gap:6px;align-items:center}
+  .cal-legend .sw{width:12px;height:12px;border-radius:4px;display:inline-block}
+  .cal-legend .sw.hot{background:rgba(251,191,36,.55);border:1px solid rgba(251,191,36,.7)}
+  .cal-legend .sw.have{background:rgba(255,255,255,.14)}
+
   .nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(10px);
     background:rgba(11,15,26,.82);border:1px solid var(--line);border-radius:14px;
-    padding:10px 12px;margin:18px 0 26px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    padding:10px 12px;margin:0 0 26px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
   .nav a{color:var(--mut);text-decoration:none;font-size:14px;padding:7px 13px;border-radius:10px;
     border:1px solid transparent;transition:.18s;display:inline-flex;gap:7px;align-items:center}
   .nav a:hover{color:#fff;background:rgba(255,255,255,.06);border-color:var(--line)}
-  .nav a .cnt{font-size:12px;color:var(--mut);background:rgba(255,255,255,.06);
-    border-radius:8px;padding:1px 7px}
-  .nav .top{margin-left:auto;color:var(--mut);cursor:pointer}
-  .nav .refresh{margin-left:auto;color:var(--mut);cursor:pointer;font-size:14px;padding:7px 13px;
-    border-radius:10px;border:1px solid var(--line)}
+  .nav a .cnt{font-size:12px;color:var(--mut);background:rgba(255,255,255,.06);border-radius:8px;padding:1px 7px}
+  .nav .refresh{margin-left:auto;color:var(--mut);cursor:pointer;font-size:14px;padding:7px 13px;border-radius:10px;border:1px solid var(--line)}
   .nav .refresh:hover{color:#fff;background:rgba(255,255,255,.06)}
   .section{margin:34px 0 10px;scroll-margin-top:78px}
   .section-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
   .section-head .bar{width:5px;height:26px;border-radius:3px}
   .section-head h2{font-size:22px;font-weight:800}
-  .section-head .sc{color:var(--mut);font-size:14px;border:1px solid var(--line);
-    border-radius:9px;padding:2px 10px}
+  .section-head .sc{color:var(--mut);font-size:14px;border:1px solid var(--line);border-radius:9px;padding:2px 10px}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;
-    display:flex;flex-direction:column;gap:11px;position:relative;
-    transition:transform .18s,border-color .18s,box-shadow .18s}
-  .card:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.2);
-    box-shadow:0 12px 30px rgba(0,0,0,.35)}
+    display:flex;flex-direction:column;gap:11px;position:relative;transition:transform .18s,border-color .18s,box-shadow .18s}
+  .card:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.2);box-shadow:0 12px 30px rgba(0,0,0,.35)}
   .card .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
   .num{font-size:13px;font-weight:800;color:#0b0f1a;background:var(--accent);
-    min-width:30px;height:30px;border-radius:9px;display:inline-flex;align-items:center;
-    justify-content:center;padding:0 8px}
-  .chip{font-size:12px;color:var(--mut);background:rgba(255,255,255,.06);
-    border:1px solid var(--line);border-radius:999px;padding:4px 11px;
-    max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    min-width:30px;height:30px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;padding:0 8px}
+  .chip{font-size:12px;color:var(--mut);background:rgba(255,255,255,.06);border:1px solid var(--line);
+    border-radius:999px;padding:4px 11px;max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .card h3{font-size:17px;font-weight:700;line-height:1.45}
   .card h3 a{color:#dce6ff;text-decoration:none}
   .card h3 a:hover{text-decoration:underline}
   .sum{font-size:14px;color:var(--mut);flex:1}
-  .more{font-size:13px;font-weight:600;color:var(--accent);text-decoration:none;
-    display:inline-flex;align-items:center;gap:5px;width:fit-content}
+  .more{font-size:13px;font-weight:600;color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:5px;width:fit-content}
   .more:hover{text-decoration:underline}
-  .foot{margin-top:40px;padding-top:20px;border-top:1px solid var(--line);
-    color:var(--mut);font-size:13px;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center}
+  .lead-card{background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(255,255,255,.03));
+    border:1px solid rgba(251,191,36,.3);border-radius:16px;padding:20px 22px;margin:0 0 8px}
+  .lead-card .lk{font-size:12px;color:var(--hot);font-weight:700;letter-spacing:.1em}
+  .lead-card h3{font-size:19px;font-weight:800;line-height:1.45;margin:6px 0 8px}
+  .lead-card h3 a{color:#fff;text-decoration:none}
+  .lead-card h3 a:hover{text-decoration:underline}
+  .lead-card p{font-size:14px;color:var(--mut)}
+  .foot{margin-top:40px;padding-top:20px;border-top:1px solid var(--line);color:var(--mut);
+    font-size:13px;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center}
   .foot a{color:var(--accent);text-decoration:none}
   .foot a:hover{text-decoration:underline}
-  .state{padding:60px 20px;text-align:center;color:var(--mut)}
-  .spinner{width:34px;height:34px;border:3px solid rgba(255,255,255,.12);
-    border-top-color:var(--accent);border-radius:50%;margin:0 auto 16px;animation:spin 1s linear infinite}
+  .state{padding:50px 20px;text-align:center;color:var(--mut)}
+  .spinner{width:32px;height:32px;border:3px solid rgba(255,255,255,.12);border-top-color:var(--accent);
+    border-radius:50%;margin:0 auto 14px;animation:spin 1s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   .err{background:rgba(251,113,133,.1);border:1px solid rgba(251,113,133,.3);
     border-radius:14px;padding:22px;color:#fda4af;max-width:520px;margin:0 auto}
-  .err button{margin-top:14px;background:var(--accent);color:#0b0f1a;border:none;
-    padding:9px 18px;border-radius:10px;font-weight:700;cursor:pointer}
-  @media (max-width:560px){.hero{padding:28px 20px}.wrap{padding:0 14px}
-    .nav a{padding:6px 10px;font-size:13px}}
+  .err button{margin-top:14px;background:var(--accent);color:#0b0f1a;border:none;padding:9px 18px;border-radius:10px;font-weight:700;cursor:pointer}
+  @media (max-width:560px){
+    .hero{padding:26px 20px}.wrap{padding:0 14px}.cal{padding:16px 12px}
+    .nav a{padding:6px 10px;font-size:13px}
+    .cal-cell{min-height:34px}.cal-cell .d{font-size:12px}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="hero">
-    <div class="kicker">AI HOT · 每日晨报 <span class="badge" id="dayBadge">实时</span></div>
+    <div class="kicker">AI HOT · 每日晨报档案 <span class="badge" id="dayBadge">实时</span></div>
     <h1 id="heroDate">AI 晨报</h1>
     <div class="sub" id="heroSub"></div>
     <div class="total"><b id="heroTotal">–</b><span>条精选 · 北京时间</span></div>
     <div class="stats" id="heroStats"></div>
   </header>
+
+  <section class="cal">
+    <div class="cal-head">
+      <div class="cal-title">日历档案 <small id="calRange"></small></div>
+      <div class="cal-ctrls">
+        <button id="prevM" aria-label="上个月">&#8249;</button>
+        <span class="ym" id="ymLabel"></span>
+        <button id="nextM" aria-label="下个月">&#8250;</button>
+        <button class="today-btn" id="todayBtn">回到今日</button>
+      </div>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-legend">
+      <span class="li"><i class="sw hot"></i>重大事件</span>
+      <span class="li"><i class="sw have"></i>有日报</span>
+      <span class="li">金色圆点 = 当天头条命中重大关键词</span>
+      <span class="li" id="calStatus"></span>
+    </div>
+  </section>
+
   <nav class="nav" id="nav"></nav>
   <main id="main">
-    <div class="state"><div class="spinner"></div>正在加载今日 AI 晨报…</div>
+    <div class="state"><div class="spinner"></div>正在加载 AI 晨报…</div>
   </main>
   <footer class="foot" id="foot"></footer>
 </div>
@@ -115,7 +172,6 @@
 <script>
 (function(){
   "use strict";
-  // 直接用最终域名，避开旧域名的 301 跨域跳转（跳转后 CORS 头丢失会导致浏览器 fetch 失败）
   var BASE = "https://aihot.news/api/v1";
   var SECTIONS_META = [
     {key:"ai-models",   label:"模型发布/更新", color:"#38bdf8"},
@@ -124,6 +180,17 @@
     {key:"paper",       label:"论文研究",     color:"#34d399"},
     {key:"tip",         label:"技巧与观点",   color:"#fb7185"}
   ];
+  // 重大事件关键词评分表：命中即累加权重，达到阈值判定为重大
+  var HOT_WORDS = [
+    {w:"IPO", s:3},{w:"上市", s:3},{w:"登陆纳斯达克", s:3},{w:"募资", s:2},{w:"融资", s:2},
+    {w:"收购", s:2},{w:"发布", s:2},{w:"推出", s:2},{w:"开源", s:2},{w:"突破", s:2},
+    {w:"首次", s:2},{w:"创纪录", s:3},{w:"纪录", s:2},{w:"GPT", s:2},{w:"Gemini", s:2},
+    {w:"Claude", s:2},{w:"OpenAI", s:2},{w:"Anthropic", s:2},{w:"NVIDIA", s:2},{w:"英伟达", s:2},
+    {w:"Google", s:1},{w:"Meta", s:1},{w:"微软", s:1},{w:"Microsoft", s:1},{w:" resignation".trim(), s:2},
+    {w:"辞任", s:2},{w:"辞职", s:2},{w:"变动", s:1},{w:"2万亿", s:2},{w:"万亿", s:2}
+  ];
+  var HOT_THRESHOLD = 5;
+  var HISTORY_LIMIT = 180;
 
   var zhDate=new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'long',day:'numeric',weekday:'long'});
   var zhWin =new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'long',day:'numeric'});
@@ -134,7 +201,6 @@
   function fW(s){try{return zhWin.format(new Date(s));}catch(e){return s;}}
   function fG(s){try{return zhGen.format(new Date(s));}catch(e){return s;}}
   function todayYmd(){
-    // 用 formatToParts 手动拼 YYYY-MM-DD，规避 en-CA 在部分浏览器返回 "11/20/2026" 的差异
     try{
       var parts=zhYmd.formatToParts(new Date()),o={};
       for(var i=0;i<parts.length;i++) o[parts[i].type]=parts[i].value;
@@ -143,8 +209,17 @@
     var d=new Date(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');
     return d.getFullYear()+"-"+m+"-"+dd;
   }
-  function cut(t,n){if(!t)return'';var a=[...t];return a.length<=n?t:a.slice(0,n-1).join('')+'\u2026';}
+  function ymdOf(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  function parseYmd(s){return new Date(s+'T00:00:00+08:00');}
+  function cut(t,n){if(!t)return'';var a=[...t];return a.length<=n?t:a.slice(0,n-1).join('\u2026');}
   function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e;}
+
+  function hotScore(title, para){
+    var text=((title||'')+' '+(para||'')).toLowerCase(), score=0;
+    HOT_WORDS.forEach(function(x){ if(text.indexOf(x.w.toLowerCase())>=0) score+=x.s; });
+    if(/今日安静|无大事|无明显/.test(text)) score=0;
+    return score;
+  }
 
   function matchKey(label){
     for(var i=0;i<SECTIONS_META.length;i++) if(SECTIONS_META[i].label===label) return SECTIONS_META[i].key;
@@ -157,176 +232,200 @@
   }
 
   function fetchJson(path){
-    // 用 no-store 绕过浏览器缓存；服务端支持 ETag 条件请求，无需额外查询参数
-    return fetch(BASE + path, {cache:"no-store"}).then(function(r){
-      return r.ok ? r.json() : null;
-    }).catch(function(){ return null; });
-  }
-  function pack(j, fallbackDate, today){
-    if(!j || !j.report) return null;
-    var actual = j.report.date || fallbackDate;               // 以接口返回的真实日期为准
-    return {
-      report: j.report,
-      actualDate: actual,
-      isToday: (actual === today),
-      today: today
-    };
-  }
-  function newestFromIndex(arr){
-    if(!arr || !arr.length) return null;
-    var dates = arr.map(function(x){return x.date;}).filter(Boolean).sort();
-    return dates.length ? dates[dates.length-1] : null;
+    return fetch(BASE + path, {cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});
   }
 
-  async function getReport(){
-    var today = todayYmd();
+  var INDEX = {};          // date -> {date, leadTitle, leadParagraph, score, hot}
+  var STATE = {            // 当前 UI 状态
+    viewYear:0, viewMonth:0,
+    selectedDate:null,
+    today:todayYmd()
+  };
 
-    // ① 先按顺序尝试最近 N 天的具体日期（比索引回退更可靠、更及时）
-    for(var back=0; back<5; back++){
-      var d = new Date(today+'T00:00:00+08:00');
-      d.setDate(d.getDate()-back);
-      var ymd = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-      var got = pack(await fetchJson('/dailies/'+ymd), ymd, today);
-      if(got) return got;
-    }
+  async function loadIndex(){
+    var idx = await fetchJson('/dailies?limit='+HISTORY_LIMIT);
+    if(!idx || !idx.items || !idx.items.length) throw new Error('无法获取日报索引');
+    idx.items.forEach(function(it){
+      if(!it.date) return;
+      var s = hotScore(it.leadTitle, it.leadParagraph);
+      INDEX[it.date] = {date:it.date, leadTitle:it.leadTitle||'', leadParagraph:it.leadParagraph||'', score:s, hot:(s>=HOT_THRESHOLD)};
+    });
+    return idx.items;
+  }
 
-    // ② 兜底：索引里最近一期
-    var idx = await fetchJson('/dailies?limit=7');
-    var mostRecent = idx && newestFromIndex(idx.items);
-    if(mostRecent){
-      var got2 = pack(await fetchJson('/dailies/'+mostRecent), mostRecent, today);
-      if(got2) return got2;
-    }
-    throw new Error("无法获取 AI HOT 日报");
+  async function getReport(date){
+    var j = await fetchJson('/dailies/'+date);
+    if(j && j.report) return j.report;
+    throw new Error('该日期暂无日报');
   }
 
   function buildSections(report){
-    var buckets = {};
-    SECTIONS_META.forEach(function(m){ buckets[m.key]=[]; });
+    var buckets={};
+    SECTIONS_META.forEach(function(m){buckets[m.key]=[];});
     (report.sections||[]).forEach(function(sec){
-      var key = matchKey(sec.label||"");
-      if(!key) return;
+      var key=matchKey(sec.label||""); if(!key) return;
       (sec.items||[]).forEach(function(it){
-        var links = it.links || {};
-        buckets[key].push({
-          title: it.title || "",
-          source: (it.source && it.source.name) || "未知来源",
-          summary: it.summary || "",
-          url: links.original || links.aihot
-        });
+        var links=it.links||{};
+        buckets[key].push({title:it.title||"",source:(it.source&&it.source.name)||"未知来源",summary:it.summary||"",url:links.original||links.aihot});
       });
     });
-    var ordered = [];
-    SECTIONS_META.forEach(function(m){
-      if(buckets[m.key].length) ordered.push(Object.assign({}, m, {items:buckets[m.key]}));
-    });
+    var ordered=[];
+    SECTIONS_META.forEach(function(m){ if(buckets[m.key].length) ordered.push(Object.assign({},m,{items:buckets[m.key]})); });
     return ordered;
   }
 
-  function render(info){
-    var report = info.report;
-    var sections = buildSections(report);
-    var total = sections.reduce(function(s,x){return s+x.items.length;},0);
+  function renderCalendar(){
+    var grid=document.getElementById('calGrid'); grid.innerHTML='';
+    ['一','二','三','四','五','六','日'].forEach(function(d){ grid.appendChild(el('div','cal-dow','周'+d)); });
+    var y=STATE.viewYear, m=STATE.viewMonth; // m: 0-11
+    document.getElementById('ymLabel').textContent = y+' 年 '+(m+1)+' 月';
+    var first=new Date(y,m,1), startDow=(first.getDay()+6)%7; // 周一=0
+    var days=new Date(y,m+1,0).getDate();
+    for(var i=0;i<startDow;i++) grid.appendChild(el('div','cal-cell empty'));
+    for(var d=1;d<=days;d++){
+      var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      var meta=INDEX[ds];
+      var c=el('div','cal-cell');
+      c.dataset.date=ds;
+      c.appendChild(el('span','d',String(d)));
+      if(meta){
+        c.classList.add('has-data');
+        if(meta.hot){ c.classList.add('hot'); c.appendChild(el('span','hl-dot')); }
+        c.title=ds+' · '+(meta.leadTitle||'');
+        if(ds===STATE.selectedDate) c.classList.add('selected');
+        (function(date){ c.onclick=function(){ selectDate(date); }; })(ds);
+      }else{
+        c.classList.add('no-data');
+        c.title=ds+' · 无日报';
+      }
+      grid.appendChild(c);
+    }
+    // 范围标注
+    var dates=Object.keys(INDEX).sort();
+    if(dates.length) document.getElementById('calRange').textContent='（'+dates[0]+' 起 · 共 '+dates.length+' 天）';
+  }
 
-    document.getElementById("dayBadge").textContent = info.isToday ? "今日实时" : "最近一期";
-    document.getElementById("dayBadge").className = "badge" + (info.isToday ? "" : " old");
+  function moveMonth(delta){
+    var d=new Date(STATE.viewYear, STATE.viewMonth+delta, 1);
+    STATE.viewYear=d.getFullYear(); STATE.viewMonth=d.getMonth();
+    renderCalendar();
+  }
 
-    // 以 report.date 为准显示，避免任何请求参数/时区和真实数据日期不一致
-    var shownDate = report.date || info.actualDate;
-    document.getElementById("heroDate").textContent = fmt(shownDate);
-    document.getElementById("heroTotal").textContent = total;
+  function renderReport(report, date, isToday){
+    var sections=buildSections(report);
+    var total=sections.reduce(function(s,x){return s+x.items.length;},0);
 
-    var sub = "统计区间：" + fW(report.windowStart) + " \u2013 " + fW(report.windowEnd) + "（北京时间）";
-    if(report.generatedAt) sub += " \u00b7 日报生成于 " + fG(report.generatedAt);
-    if(!info.isToday) sub += " \u00b7 今日日报尚未生成，已展示最近一期 " + fmt(shownDate);
-    document.getElementById("heroSub").textContent = sub;
+    document.getElementById('dayBadge').textContent = isToday?'今日实时':'历史回看';
+    document.getElementById('dayBadge').className = 'badge'+(isToday?'':' old');
+    var shownDate=report.date||date;
+    document.getElementById('heroDate').textContent=fmt(shownDate);
+    document.getElementById('heroTotal').textContent=total;
+    var sub='统计区间：'+fW(report.windowStart)+' – '+fW(report.windowEnd)+'（北京时间）';
+    if(report.generatedAt) sub+=' · 日报生成于 '+fG(report.generatedAt);
+    if(!isToday) sub+=' · 正在回看历史日报';
+    document.getElementById('heroSub').textContent=sub;
 
-    var stats = document.getElementById("heroStats"); stats.innerHTML="";
+    var stats=document.getElementById('heroStats'); stats.innerHTML='';
     sections.forEach(function(s){
-      var d=el("div","stat");
-      var dot=el("span","dot"); dot.style.background=s.color; d.appendChild(dot);
-      d.appendChild(el("b",null,String(s.items.length)));
-      d.appendChild(el("span","lbl",s.label));
-      stats.appendChild(d);
+      var d=el('div','stat'); var dot=el('span','dot'); dot.style.background=s.color; d.appendChild(dot);
+      d.appendChild(el('b',null,String(s.items.length))); d.appendChild(el('span','lbl',s.label)); stats.appendChild(d);
     });
 
-    var nav=document.getElementById("nav"); nav.innerHTML="";
+    var nav=document.getElementById('nav'); nav.innerHTML='';
     sections.forEach(function(s){
-      var a=document.createElement("a"); a.href="#sec-"+s.key;
-      a.appendChild(el("span",null,s.label));
-      a.appendChild(el("span","cnt",String(s.items.length)));
-      nav.appendChild(a);
+      var a=document.createElement('a'); a.href='#sec-'+s.key;
+      a.appendChild(el('span',null,s.label)); a.appendChild(el('span','cnt',String(s.items.length))); nav.appendChild(a);
     });
-    var refresh=el("a","refresh","\u5237\u65b0"); refresh.href="#";
-    refresh.onclick=function(e){e.preventDefault();load();};
-    nav.appendChild(refresh);
+    var refresh=el('a','refresh','刷新'); refresh.href='#';
+    refresh.onclick=function(e){e.preventDefault();selectDate(STATE.selectedDate,true);}; nav.appendChild(refresh);
 
-    var main=document.getElementById("main"); main.innerHTML="";
+    var main=document.getElementById('main'); main.innerHTML='';
+    if(report.lead && report.lead.title){
+      var lc=el('div','lead-card');
+      lc.appendChild(el('div','lk','今日头条'));
+      var h3=el('h3'); var la=document.createElement('a');
+      la.textContent=report.lead.title; var lurl=(report.lead.links&&(report.lead.links.original||report.lead.links.aihot))||'';
+      la.href=lurl||'#'; la.target='_blank'; la.rel='noopener noreferrer';
+      h3.appendChild(la); lc.appendChild(h3);
+      if(report.lead.leadParagraph) lc.appendChild(el('p',null,cut(report.lead.leadParagraph,120)));
+      main.appendChild(lc);
+    }
     var n=0;
     sections.forEach(function(s){
-      var sec=el("section","section"); sec.id="sec-"+s.key; sec.style.scrollMarginTop="78px";
-      var head=el("div","section-head");
-      var bar=el("span","bar"); bar.style.background=s.color; head.appendChild(bar);
-      head.appendChild(el("h2",null,s.label));
-      head.appendChild(el("span","sc",s.items.length+" \u6761"));
-      sec.appendChild(head);
-      var grid=el("div","grid");
+      var sec=el('section','section'); sec.id='sec-'+s.key;
+      var head=el('div','section-head'); var bar=el('span','bar'); bar.style.background=s.color; head.appendChild(bar);
+      head.appendChild(el('h2',null,s.label)); head.appendChild(el('span','sc',s.items.length+' 条')); sec.appendChild(head);
+      var grid=el('div','grid');
       s.items.forEach(function(it){
         n++;
-        var card=el("div","card"); card.style.borderTop="3px solid "+s.color;
-        var ct=el("div","top");
-        ct.appendChild(el("span","num",String(n)));
-        ct.appendChild(el("span","chip",it.source));
-        card.appendChild(ct);
-        var h3=el("h3");
-        var lk=document.createElement("a"); lk.textContent=it.title; lk.href=it.url||"#";
-        lk.target="_blank"; lk.rel="noopener noreferrer";
-        h3.appendChild(lk); card.appendChild(h3);
-        card.appendChild(el("p","sum",cut(it.summary,60)));
-        var mr=document.createElement("a"); mr.className="more"; mr.textContent="\u9605\u8bfb\u539f\u6587 \u2192";
-        mr.href=it.url||"#"; mr.target="_blank"; mr.rel="noopener noreferrer";
-        card.appendChild(mr);
+        var card=el('div','card'); card.style.borderTop='3px solid '+s.color;
+        var ct=el('div','top'); ct.appendChild(el('span','num',String(n))); ct.appendChild(el('span','chip',it.source)); card.appendChild(ct);
+        var h=el('h3'); var lk=document.createElement('a'); lk.textContent=it.title; lk.href=it.url||'#';
+        lk.target='_blank'; lk.rel='noopener noreferrer'; h.appendChild(lk); card.appendChild(h);
+        card.appendChild(el('p','sum',cut(it.summary,60)));
+        var mr=el('a','more','阅读全文 →'); mr.href=it.url||'#'; mr.target='_blank'; mr.rel='noopener noreferrer'; card.appendChild(mr);
         grid.appendChild(card);
       });
       sec.appendChild(grid); main.appendChild(sec);
     });
 
-    var foot=document.getElementById("foot"); foot.innerHTML="";
-    foot.appendChild(el("span",null,"\u5171 "+total+" \u6761"));
-    var src=(report.attribution && report.attribution.name) || "AI HOT";
-    var surl=(report.links && report.links.aihot);
-    if(surl){
-      var a=document.createElement("a"); a.href=surl; a.target="_blank"; a.rel="noopener noreferrer";
-      a.textContent="\u6570\u636e\u6765\u6e90\uff1a"+src+"（aihot.virxact.com\uff09";
-      foot.appendChild(a);
-    } else {
-      foot.appendChild(el("span",null,"\u6570\u636e\u6765\u6e90\uff1a"+src));
-    }
+    var foot=document.getElementById('foot'); foot.innerHTML='';
+    foot.appendChild(el('span',null,'共 '+total+' 条'));
+    var src=(report.attribution&&report.attribution.name)||'AI HOT';
+    var surl=(report.links&&report.links.aihot);
+    if(surl){ var a=document.createElement('a'); a.href=surl; a.target='_blank'; a.rel='noopener noreferrer';
+      a.textContent='数据来源：'+src+'（aihot.news）'; foot.appendChild(a); }
+    else foot.appendChild(el('span',null,'数据来源：'+src));
   }
 
+  function showMainLoading(msg){
+    document.getElementById('main').innerHTML='<div class="state"><div class="spinner"></div>'+(msg||'加载中…')+'</div>';
+  }
   function showError(msg){
-    var main=document.getElementById("main");
-    main.innerHTML="";
-    var box=el("div","err");
-    box.appendChild(el("div",null,msg));
-    var btn=document.createElement("button"); btn.textContent="\u91cd\u8bd5";
-    btn.onclick=function(){ load(); };
-    box.appendChild(btn);
-    main.appendChild(box);
+    var main=document.getElementById('main'); main.innerHTML='';
+    var box=el('div','err'); box.appendChild(el('div',null,msg));
+    var btn=document.createElement('button'); btn.textContent='重试'; btn.onclick=function(){ selectDate(STATE.selectedDate,true); };
+    box.appendChild(btn); main.appendChild(box);
   }
 
-  async function load(){
-    var main=document.getElementById("main");
-    main.innerHTML='<div class="state"><div class="spinner"></div>\u6b63\u5728\u52a0\u8f7d\u4eca\u65e5 AI \u6668\u62a5\u2026</div>';
+  async function selectDate(date, force){
+    STATE.selectedDate=date;
+    var d=parseYmd(date);
+    STATE.viewYear=d.getFullYear(); STATE.viewMonth=d.getMonth();
+    renderCalendar();
+    showMainLoading('正在加载 '+date+' 的日报…');
     try{
-      var info = await getReport();
-      render(info);
+      var report=await getReport(date);
+      renderReport(report, date, (date===STATE.today));
     }catch(e){
-      showError("\u52a0\u8f7d\u5931\u8d25\uff1a" + (e && e.message ? e.message : e));
+      showError('加载失败：'+(e&&e.message?e.message:e));
     }
   }
 
-  load();
+  document.getElementById('prevM').onclick=function(){moveMonth(-1);};
+  document.getElementById('nextM').onclick=function(){moveMonth(1);};
+  document.getElementById('todayBtn').onclick=function(){ selectDate(STATE.today); };
+
+  async function init(){
+    document.getElementById('calStatus').textContent='正在载入历史索引…';
+    showMainLoading('正在加载 AI 晨报档案…');
+    try{
+      await loadIndex();
+      document.getElementById('calStatus').textContent='已载入 '+Object.keys(INDEX).length+' 天档案';
+      // 默认今日；今日无数据则回退到索引里最近的一天
+      var target=STATE.today;
+      if(!INDEX[target]){
+        var dates=Object.keys(INDEX).sort();
+        target=dates[dates.length-1]||STATE.today;
+      }
+      await selectDate(target);
+    }catch(e){
+      document.getElementById('calStatus').textContent='索引载入失败';
+      showError('初始化失败：'+(e&&e.message?e.message:e));
+    }
+  }
+
+  init();
 })();
 </script>
 </body>
