@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI 晨报 · 日历档案</title>
-<meta name="wb-version" content="2026-11-20-3-calendar-fixed">
+<meta name="wb-version" content="2026-11-20-3-calendar-fixed2">
 <style>
   :root{
     --bg:#0b0f1a; --card:rgba(255,255,255,.045);
@@ -274,6 +274,31 @@
     return ordered;
   }
 
+  // 头条本身不带 links，从 sections/flashes/highlights 里按标题匹配出真实链接
+  function findLeadUrl(report, title){
+    if(!title) return '';
+    var norm=function(s){return (s||'').replace(/[\s\u3000]/g,'').toLowerCase();};
+    var target=norm(title);
+    var pools=[];
+    (report.sections||[]).forEach(function(s){(s.items||[]).forEach(function(it){pools.push(it);});});
+    (report.flashes||[]).forEach(function(it){pools.push(it);});
+    (report.highlights||[]).forEach(function(it){pools.push(it);});
+    // 1) 标准化后完全相等
+    for(var i=0;i<pools.length;i++){
+      if(norm(pools[i].title)===target){
+        var l=pools[i].links||{}; if(l.original||l.aihot) return l.original||l.aihot;
+      }
+    }
+    // 2) 互相包含（标题可能被截断或带前缀）
+    for(var j=0;j<pools.length;j++){
+      var t=norm(pools[j].title);
+      if(t && (t.indexOf(target)>=0 || target.indexOf(t)>=0) && Math.min(t.length,target.length)/Math.max(t.length,target.length)>0.6){
+        var l2=pools[j].links||{}; if(l2.original||l2.aihot) return l2.original||l2.aihot;
+      }
+    }
+    return '';
+  }
+
   function renderCalendar(){
     var grid=document.getElementById('calGrid'); grid.innerHTML='';
     ['一','二','三','四','五','六','日'].forEach(function(d){ grid.appendChild(el('div','cal-dow','周'+d)); });
@@ -344,8 +369,10 @@
       var lc=el('div','lead-card');
       lc.appendChild(el('div','lk','今日头条'));
       var h3=el('h3'); var la=document.createElement('a');
-      la.textContent=report.lead.title; var lurl=(report.lead.links&&(report.lead.links.original||report.lead.links.aihot))||'';
-      la.href=lurl||'#'; la.target='_blank'; la.rel='noopener noreferrer';
+      la.textContent=report.lead.title;
+      var lurl=(report.lead.links&&(report.lead.links.original||report.lead.links.aihot))||findLeadUrl(report, report.lead.title);
+      if(lurl){ la.href=lurl; la.target='_blank'; la.rel='noopener noreferrer'; }
+      else { la.href='#'; la.onclick=function(e){e.preventDefault();}; la.style.cursor='default'; la.title='暂无原文链接'; }
       h3.appendChild(la); lc.appendChild(h3);
       if(report.lead.leadParagraph) lc.appendChild(el('p',null,cut(report.lead.leadParagraph,120)));
       main.appendChild(lc);
