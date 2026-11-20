@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI 晨报 · 每日自动更新</title>
+<meta name="wb-version" content="2026-11-20-2">
 <style>
   :root{
     --bg:#0b0f1a; --card:rgba(255,255,255,.045);
@@ -114,7 +115,8 @@
 <script>
 (function(){
   "use strict";
-  var BASE = "https://aihot.virxact.com/api/v1";
+  // 直接用最终域名，避开旧域名的 301 跨域跳转（跳转后 CORS 头丢失会导致浏览器 fetch 失败）
+  var BASE = "https://aihot.news/api/v1";
   var SECTIONS_META = [
     {key:"ai-models",   label:"模型发布/更新", color:"#38bdf8"},
     {key:"ai-products", label:"产品发布/更新", color:"#a78bfa"},
@@ -131,7 +133,16 @@
   function fmt(s){try{return zhDate.format(new Date(s+'T00:00:00+08:00'));}catch(e){return s;}}
   function fW(s){try{return zhWin.format(new Date(s));}catch(e){return s;}}
   function fG(s){try{return zhGen.format(new Date(s));}catch(e){return s;}}
-  function todayYmd(){return zhYmd.format(new Date());}
+  function todayYmd(){
+    // 用 formatToParts 手动拼 YYYY-MM-DD，规避 en-CA 在部分浏览器返回 "11/20/2026" 的差异
+    try{
+      var parts=zhYmd.formatToParts(new Date()),o={};
+      for(var i=0;i<parts.length;i++) o[parts[i].type]=parts[i].value;
+      if(o.year&&o.month&&o.day) return o.year+"-"+o.month+"-"+o.day;
+    }catch(e){}
+    var d=new Date(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');
+    return d.getFullYear()+"-"+m+"-"+dd;
+  }
   function cut(t,n){if(!t)return'';var a=[...t];return a.length<=n?t:a.slice(0,n-1).join('')+'\u2026';}
   function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e;}
 
@@ -145,26 +156,46 @@
     return null;
   }
 
+  function fetchJson(path){
+    // 用 no-store 绕过浏览器缓存；服务端支持 ETag 条件请求，无需额外查询参数
+    return fetch(BASE + path, {cache:"no-store"}).then(function(r){
+      return r.ok ? r.json() : null;
+    }).catch(function(){ return null; });
+  }
+  function pack(j, fallbackDate, today){
+    if(!j || !j.report) return null;
+    var actual = j.report.date || fallbackDate;               // 以接口返回的真实日期为准
+    return {
+      report: j.report,
+      actualDate: actual,
+      isToday: (actual === today),
+      today: today
+    };
+  }
+  function newestFromIndex(arr){
+    if(!arr || !arr.length) return null;
+    var dates = arr.map(function(x){return x.date;}).filter(Boolean).sort();
+    return dates.length ? dates[dates.length-1] : null;
+  }
+
   async function getReport(){
     var today = todayYmd();
-    var res = await fetch(BASE + "/dailies/" + today, {cache:"no-store"});
-    if(res.ok){
-      var j = await res.json();
-      if(j && j.report) return {report:j.report, actualDate:today, isToday:true};
+
+    // ① 先按顺序尝试最近 N 天的具体日期（比索引回退更可靠、更及时）
+    for(var back=0; back<5; back++){
+      var d = new Date(today+'T00:00:00+08:00');
+      d.setDate(d.getDate()-back);
+      var ymd = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+      var got = pack(await fetchJson('/dailies/'+ymd), ymd, today);
+      if(got) return got;
     }
-    // fallback: index -> most recent date
-    res = await fetch(BASE + "/dailies?limit=7", {cache:"no-store"});
-    if(res.ok){
-      var idx = await res.json();
-      if(idx && idx.items && idx.items.length){
-        idx.items.sort(function(a,b){ return a.date < b.date ? 1 : -1; });
-        var mostRecent = idx.items[0].date;
-        res = await fetch(BASE + "/dailies/" + mostRecent, {cache:"no-store"});
-        if(res.ok){
-          var j2 = await res.json();
-          if(j2 && j2.report) return {report:j2.report, actualDate:mostRecent, isToday:false, today:today};
-        }
-      }
+
+    // ② 兜底：索引里最近一期
+    var idx = await fetchJson('/dailies?limit=7');
+    var mostRecent = idx && newestFromIndex(idx.items);
+    if(mostRecent){
+      var got2 = pack(await fetchJson('/dailies/'+mostRecent), mostRecent, today);
+      if(got2) return got2;
     }
     throw new Error("无法获取 AI HOT 日报");
   }
@@ -197,15 +228,17 @@
     var sections = buildSections(report);
     var total = sections.reduce(function(s,x){return s+x.items.length;},0);
 
-    document.getElementById("dayBadge").textContent = info.isToday ? "今日" : "最近一期";
+    document.getElementById("dayBadge").textContent = info.isToday ? "今日实时" : "最近一期";
     document.getElementById("dayBadge").className = "badge" + (info.isToday ? "" : " old");
 
-    document.getElementById("heroDate").textContent = fmt(info.actualDate);
+    // 以 report.date 为准显示，避免任何请求参数/时区和真实数据日期不一致
+    var shownDate = report.date || info.actualDate;
+    document.getElementById("heroDate").textContent = fmt(shownDate);
     document.getElementById("heroTotal").textContent = total;
 
     var sub = "统计区间：" + fW(report.windowStart) + " \u2013 " + fW(report.windowEnd) + "（北京时间）";
     if(report.generatedAt) sub += " \u00b7 日报生成于 " + fG(report.generatedAt);
-    if(!info.isToday) sub += " \u00b7 当日日报尚未生成，已回退到最近一期 " + fmt(info.actualDate);
+    if(!info.isToday) sub += " \u00b7 今日日报尚未生成，已展示最近一期 " + fmt(shownDate);
     document.getElementById("heroSub").textContent = sub;
 
     var stats = document.getElementById("heroStats"); stats.innerHTML="";
