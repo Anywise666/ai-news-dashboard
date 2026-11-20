@@ -1,2 +1,21 @@
-# ai-news-dashboard
-Daily AI news dashboard
+# AI 晨报仪表盘 (ai-news-dashboard)
+
+每日 AI 新闻的静态 HTML 仪表盘。单文件自包含(内联 CSS/JS),无需构建,直接用浏览器打开即可查看。
+
+## 文件说明
+
+| 文件 | 说明 |
+|------|------|
+| `index.html` | 每日自动更新版(默认首页) |
+| `ai-daily-2026-08-01.html` | 2026-08-01 单文件日报归档快照 |
+
+## 预览方式
+
+- 本地:直接用浏览器打开对应 `.html` 文件。
+- 在线:本仓库已开启 GitHub Pages,访问 `https://anywise666.github.io/ai-news-dashboard/` 查看首页。
+
+## 技术说明
+
+- 纯静态单文件,深色主题,响应式布局。
+- 无外部依赖、无后端,所有样式与脚本内联。
+

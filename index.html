@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 晨报 · 每日自动更新</title>
+<style>
+  :root{
+    --bg:#0b0f1a; --card:rgba(255,255,255,.045);
+    --line:rgba(255,255,255,.09); --txt:#e8edf7; --mut:#9aa6bf;
+    --accent:#6ea8fe;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:"PingFang SC","Microsoft YaHei","Segoe UI",system-ui,-apple-system,sans-serif;
+    background:radial-gradient(1200px 600px at 80% -10%,rgba(110,168,254,.12),transparent 60%),
+               radial-gradient(900px 500px at 0% 0%,rgba(167,139,250,.10),transparent 55%),
+               var(--bg);
+    color:var(--txt); line-height:1.6; padding-bottom:48px;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+  .hero{position:relative;overflow:hidden;
+    background:linear-gradient(135deg,rgba(110,168,254,.16),rgba(167,139,250,.10));
+    border:1px solid var(--line);border-radius:22px;
+    padding:38px 34px;margin:28px 0 18px;}
+  .hero .kicker{font-size:13px;letter-spacing:.18em;color:var(--mut);text-transform:uppercase}
+  .hero h1{font-size:clamp(26px,4.5vw,44px);font-weight:800;margin:6px 0 4px;
+    background:linear-gradient(90deg,#fff,#bcd0ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero .sub{color:var(--mut);font-size:15px}
+  .badge{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;
+    background:rgba(52,211,153,.18);color:#34d399;border:1px solid rgba(52,211,153,.35);margin-left:8px;vertical-align:middle}
+  .badge.old{background:rgba(251,191,36,.16);color:#fbbf24;border-color:rgba(251,191,36,.35)}
+  .hero .total{display:inline-flex;align-items:baseline;gap:8px;margin-top:18px;
+    background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:14px;padding:12px 18px}
+  .hero .total b{font-size:34px;font-weight:800;color:#fff}
+  .hero .total span{color:var(--mut);font-size:14px}
+  .stats{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px}
+  .stat{display:flex;align-items:center;gap:9px;background:rgba(0,0,0,.22);
+    border:1px solid var(--line);border-radius:12px;padding:9px 14px;font-size:14px}
+  .stat .dot{width:10px;height:10px;border-radius:50%}
+  .stat b{font-size:17px;font-weight:700}
+  .stat .lbl{color:var(--mut)}
+  .nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(10px);
+    background:rgba(11,15,26,.82);border:1px solid var(--line);border-radius:14px;
+    padding:10px 12px;margin:18px 0 26px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .nav a{color:var(--mut);text-decoration:none;font-size:14px;padding:7px 13px;border-radius:10px;
+    border:1px solid transparent;transition:.18s;display:inline-flex;gap:7px;align-items:center}
+  .nav a:hover{color:#fff;background:rgba(255,255,255,.06);border-color:var(--line)}
+  .nav a .cnt{font-size:12px;color:var(--mut);background:rgba(255,255,255,.06);
+    border-radius:8px;padding:1px 7px}
+  .nav .top{margin-left:auto;color:var(--mut);cursor:pointer}
+  .nav .refresh{margin-left:auto;color:var(--mut);cursor:pointer;font-size:14px;padding:7px 13px;
+    border-radius:10px;border:1px solid var(--line)}
+  .nav .refresh:hover{color:#fff;background:rgba(255,255,255,.06)}
+  .section{margin:34px 0 10px;scroll-margin-top:78px}
+  .section-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+  .section-head .bar{width:5px;height:26px;border-radius:3px}
+  .section-head h2{font-size:22px;font-weight:800}
+  .section-head .sc{color:var(--mut);font-size:14px;border:1px solid var(--line);
+    border-radius:9px;padding:2px 10px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;
+    display:flex;flex-direction:column;gap:11px;position:relative;
+    transition:transform .18s,border-color .18s,box-shadow .18s}
+  .card:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.2);
+    box-shadow:0 12px 30px rgba(0,0,0,.35)}
+  .card .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .num{font-size:13px;font-weight:800;color:#0b0f1a;background:var(--accent);
+    min-width:30px;height:30px;border-radius:9px;display:inline-flex;align-items:center;
+    justify-content:center;padding:0 8px}
+  .chip{font-size:12px;color:var(--mut);background:rgba(255,255,255,.06);
+    border:1px solid var(--line);border-radius:999px;padding:4px 11px;
+    max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .card h3{font-size:17px;font-weight:700;line-height:1.45}
+  .card h3 a{color:#dce6ff;text-decoration:none}
+  .card h3 a:hover{text-decoration:underline}
+  .sum{font-size:14px;color:var(--mut);flex:1}
+  .more{font-size:13px;font-weight:600;color:var(--accent);text-decoration:none;
+    display:inline-flex;align-items:center;gap:5px;width:fit-content}
+  .more:hover{text-decoration:underline}
+  .foot{margin-top:40px;padding-top:20px;border-top:1px solid var(--line);
+    color:var(--mut);font-size:13px;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center}
+  .foot a{color:var(--accent);text-decoration:none}
+  .foot a:hover{text-decoration:underline}
+  .state{padding:60px 20px;text-align:center;color:var(--mut)}
+  .spinner{width:34px;height:34px;border:3px solid rgba(255,255,255,.12);
+    border-top-color:var(--accent);border-radius:50%;margin:0 auto 16px;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .err{background:rgba(251,113,133,.1);border:1px solid rgba(251,113,133,.3);
+    border-radius:14px;padding:22px;color:#fda4af;max-width:520px;margin:0 auto}
+  .err button{margin-top:14px;background:var(--accent);color:#0b0f1a;border:none;
+    padding:9px 18px;border-radius:10px;font-weight:700;cursor:pointer}
+  @media (max-width:560px){.hero{padding:28px 20px}.wrap{padding:0 14px}
+    .nav a{padding:6px 10px;font-size:13px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="kicker">AI HOT · 每日晨报 <span class="badge" id="dayBadge">实时</span></div>
+    <h1 id="heroDate">AI 晨报</h1>
+    <div class="sub" id="heroSub"></div>
+    <div class="total"><b id="heroTotal">–</b><span>条精选 · 北京时间</span></div>
+    <div class="stats" id="heroStats"></div>
+  </header>
+  <nav class="nav" id="nav"></nav>
+  <main id="main">
+    <div class="state"><div class="spinner"></div>正在加载今日 AI 晨报…</div>
+  </main>
+  <footer class="foot" id="foot"></footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var BASE = "https://aihot.virxact.com/api/v1";
+  var SECTIONS_META = [
+    {key:"ai-models",   label:"模型发布/更新", color:"#38bdf8"},
+    {key:"ai-products", label:"产品发布/更新", color:"#a78bfa"},
+    {key:"industry",    label:"行业动态",     color:"#fbbf24"},
+    {key:"paper",       label:"论文研究",     color:"#34d399"},
+    {key:"tip",         label:"技巧与观点",   color:"#fb7185"}
+  ];
+
+  var zhDate=new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'long',day:'numeric',weekday:'long'});
+  var zhWin =new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'long',day:'numeric'});
+  var zhGen =new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});
+  var zhYmd =new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'});
+
+  function fmt(s){try{return zhDate.format(new Date(s+'T00:00:00+08:00'));}catch(e){return s;}}
+  function fW(s){try{return zhWin.format(new Date(s));}catch(e){return s;}}
+  function fG(s){try{return zhGen.format(new Date(s));}catch(e){return s;}}
+  function todayYmd(){return zhYmd.format(new Date());}
+  function cut(t,n){if(!t)return'';var a=[...t];return a.length<=n?t:a.slice(0,n-1).join('')+'\u2026';}
+  function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e;}
+
+  function matchKey(label){
+    for(var i=0;i<SECTIONS_META.length;i++) if(SECTIONS_META[i].label===label) return SECTIONS_META[i].key;
+    if(label.indexOf("模型")>=0)return"ai-models";
+    if(label.indexOf("产品")>=0)return"ai-products";
+    if(label.indexOf("行业")>=0)return"industry";
+    if(label.indexOf("论文")>=0)return"paper";
+    if(label.indexOf("技巧")>=0)return"tip";
+    return null;
+  }
+
+  async function getReport(){
+    var today = todayYmd();
+    var res = await fetch(BASE + "/dailies/" + today, {cache:"no-store"});
+    if(res.ok){
+      var j = await res.json();
+      if(j && j.report) return {report:j.report, actualDate:today, isToday:true};
+    }
+    // fallback: index -> most recent date
+    res = await fetch(BASE + "/dailies?limit=7", {cache:"no-store"});
+    if(res.ok){
+      var idx = await res.json();
+      if(idx && idx.items && idx.items.length){
+        idx.items.sort(function(a,b){ return a.date < b.date ? 1 : -1; });
+        var mostRecent = idx.items[0].date;
+        res = await fetch(BASE + "/dailies/" + mostRecent, {cache:"no-store"});
+        if(res.ok){
+          var j2 = await res.json();
+          if(j2 && j2.report) return {report:j2.report, actualDate:mostRecent, isToday:false, today:today};
+        }
+      }
+    }
+    throw new Error("无法获取 AI HOT 日报");
+  }
+
+  function buildSections(report){
+    var buckets = {};
+    SECTIONS_META.forEach(function(m){ buckets[m.key]=[]; });
+    (report.sections||[]).forEach(function(sec){
+      var key = matchKey(sec.label||"");
+      if(!key) return;
+      (sec.items||[]).forEach(function(it){
+        var links = it.links || {};
+        buckets[key].push({
+          title: it.title || "",
+          source: (it.source && it.source.name) || "未知来源",
+          summary: it.summary || "",
+          url: links.original || links.aihot
+        });
+      });
+    });
+    var ordered = [];
+    SECTIONS_META.forEach(function(m){
+      if(buckets[m.key].length) ordered.push(Object.assign({}, m, {items:buckets[m.key]}));
+    });
+    return ordered;
+  }
+
+  function render(info){
+    var report = info.report;
+    var sections = buildSections(report);
+    var total = sections.reduce(function(s,x){return s+x.items.length;},0);
+
+    document.getElementById("dayBadge").textContent = info.isToday ? "今日" : "最近一期";
+    document.getElementById("dayBadge").className = "badge" + (info.isToday ? "" : " old");
+
+    document.getElementById("heroDate").textContent = fmt(info.actualDate);
+    document.getElementById("heroTotal").textContent = total;
+
+    var sub = "统计区间：" + fW(report.windowStart) + " \u2013 " + fW(report.windowEnd) + "（北京时间）";
+    if(report.generatedAt) sub += " \u00b7 日报生成于 " + fG(report.generatedAt);
+    if(!info.isToday) sub += " \u00b7 当日日报尚未生成，已回退到最近一期 " + fmt(info.actualDate);
+    document.getElementById("heroSub").textContent = sub;
+
+    var stats = document.getElementById("heroStats"); stats.innerHTML="";
+    sections.forEach(function(s){
+      var d=el("div","stat");
+      var dot=el("span","dot"); dot.style.background=s.color; d.appendChild(dot);
+      d.appendChild(el("b",null,String(s.items.length)));
+      d.appendChild(el("span","lbl",s.label));
+      stats.appendChild(d);
+    });
+
+    var nav=document.getElementById("nav"); nav.innerHTML="";
+    sections.forEach(function(s){
+      var a=document.createElement("a"); a.href="#sec-"+s.key;
+      a.appendChild(el("span",null,s.label));
+      a.appendChild(el("span","cnt",String(s.items.length)));
+      nav.appendChild(a);
+    });
+    var refresh=el("a","refresh","\u5237\u65b0"); refresh.href="#";
+    refresh.onclick=function(e){e.preventDefault();load();};
+    nav.appendChild(refresh);
+
+    var main=document.getElementById("main"); main.innerHTML="";
+    var n=0;
+    sections.forEach(function(s){
+      var sec=el("section","section"); sec.id="sec-"+s.key; sec.style.scrollMarginTop="78px";
+      var head=el("div","section-head");
+      var bar=el("span","bar"); bar.style.background=s.color; head.appendChild(bar);
+      head.appendChild(el("h2",null,s.label));
+      head.appendChild(el("span","sc",s.items.length+" \u6761"));
+      sec.appendChild(head);
+      var grid=el("div","grid");
+      s.items.forEach(function(it){
+        n++;
+        var card=el("div","card"); card.style.borderTop="3px solid "+s.color;
+        var ct=el("div","top");
+        ct.appendChild(el("span","num",String(n)));
+        ct.appendChild(el("span","chip",it.source));
+        card.appendChild(ct);
+        var h3=el("h3");
+        var lk=document.createElement("a"); lk.textContent=it.title; lk.href=it.url||"#";
+        lk.target="_blank"; lk.rel="noopener noreferrer";
+        h3.appendChild(lk); card.appendChild(h3);
+        card.appendChild(el("p","sum",cut(it.summary,60)));
+        var mr=document.createElement("a"); mr.className="more"; mr.textContent="\u9605\u8bfb\u539f\u6587 \u2192";
+        mr.href=it.url||"#"; mr.target="_blank"; mr.rel="noopener noreferrer";
+        card.appendChild(mr);
+        grid.appendChild(card);
+      });
+      sec.appendChild(grid); main.appendChild(sec);
+    });
+
+    var foot=document.getElementById("foot"); foot.innerHTML="";
+    foot.appendChild(el("span",null,"\u5171 "+total+" \u6761"));
+    var src=(report.attribution && report.attribution.name) || "AI HOT";
+    var surl=(report.links && report.links.aihot);
+    if(surl){
+      var a=document.createElement("a"); a.href=surl; a.target="_blank"; a.rel="noopener noreferrer";
+      a.textContent="\u6570\u636e\u6765\u6e90\uff1a"+src+"（aihot.virxact.com\uff09";
+      foot.appendChild(a);
+    } else {
+      foot.appendChild(el("span",null,"\u6570\u636e\u6765\u6e90\uff1a"+src));
+    }
+  }
+
+  function showError(msg){
+    var main=document.getElementById("main");
+    main.innerHTML="";
+    var box=el("div","err");
+    box.appendChild(el("div",null,msg));
+    var btn=document.createElement("button"); btn.textContent="\u91cd\u8bd5";
+    btn.onclick=function(){ load(); };
+    box.appendChild(btn);
+    main.appendChild(box);
+  }
+
+  async function load(){
+    var main=document.getElementById("main");
+    main.innerHTML='<div class="state"><div class="spinner"></div>\u6b63\u5728\u52a0\u8f7d\u4eca\u65e5 AI \u6668\u62a5\u2026</div>';
+    try{
+      var info = await getReport();
+      render(info);
+    }catch(e){
+      showError("\u52a0\u8f7d\u5931\u8d25\uff1a" + (e && e.message ? e.message : e));
+    }
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>
