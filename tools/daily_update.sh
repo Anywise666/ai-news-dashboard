@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# AI 晨报播客每日更新：跨机器幂等补跑版
-# 触发：每天 8:30 正常任务；以及任意已登录 WorkBuddy 账号的机器上线后的每小时补跑检查
+# AI 晨报播客每日更新：跨机器幂等补跑版（备用）
+# 主方案已迁移到 GitHub Actions（.github/workflows/daily-podcast.yml），本脚本保留为备用/手动补跑。
+# 原触发：每天 8:30 正常任务；以及任意已登录 WorkBuddy 账号的机器上线后的每小时补跑检查
 # 原则：GitHub main 上当天 audio/YYYY-MM-DD/manifest.json 是“已完成”的唯一事实源
 set -euo pipefail
 

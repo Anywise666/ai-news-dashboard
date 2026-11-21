@@ -21,9 +21,10 @@
 |------|------|
 | `index.html` | 日历档案 + 双语播客版(默认首页) |
 | `audio/YYYY-MM-DD/` | 每日预生成的双语 mp3 + manifest.json(最近30天) |
-| `tools/gen_audio.py` | 音频生成脚本(edge-tts) |
-| `tools/daily_update.sh` | 跨机器幂等补跑脚本：生成音频并推送 main |
-| `docs/AUTOMATION.md` | 自动化配置与维护基线（含备用服务器方案） |
+| `.github/workflows/daily-podcast.yml` | **当前主方案**：GitHub Actions 每日定时生成并推送音频(北京时间 8:30) |
+| `tools/gen_audio.py` | 音频生成脚本(edge-tts)，由 Actions 直接复用 |
+| `tools/daily_update.sh` | 跨机器幂等补跑脚本(原 WorkBuddy 任务使用，现备用) |
+| `docs/AUTOMATION.md` | 自动化配置与维护基线(含 GitHub Actions 配置与备用服务器方案) |
 | `ai-daily-2026-08-01.html` | 2026-08-01 单文件日报归档快照 |
 
 ## 功能
@@ -39,7 +40,7 @@
 - 英文原题来自 `/api/v1/items`(仅覆盖近 7 天,约 77% 条目有英文原题),历史日期无英文原题时自动降级为纯中文朗读。
 - **预生成音频(微信可用)**:每天自动生成并托管在仓库 `audio/` 目录,页面优先播放 mp3,微信内可直接听;微软神经音色,音质优于浏览器 TTS。仅保留最近 30 天。
 - 无预生成音频时(如历史日期)回退浏览器 TTS;微信内不支持则提示在浏览器中打开。
-- 生成由 `tools/gen_audio.py` 完成(edge-tts 免费)；`tools/daily_update.sh` 负责生成后推送 main。自动化每天 8:30 执行，同时登录同一 WorkBuddy 账号的机器上线后每小时检查补跑，当天已完成会自动跳过。
+- 生成由 `tools/gen_audio.py` 完成(edge-tts 免费)；由 **GitHub Actions** 每天北京时间 8:30 自动运行并推送 main，当天已完成会自动跳过。整条链路在 GitHub 云端完成，不依赖任何机器在线（原 WorkBuddy 本地任务与每小时补跑已停用，改为备用）。
 
 ## 技术说明
 
@@ -54,10 +55,12 @@
 - GitHub Pages:push 到 main 自动部署(约 20 秒生效)。
 - 内置发布:在「设置—数据管理—应用」中重新发布目录(链接会变)。
 
-### 自动化补跑
+### 自动化（GitHub Actions）
 完整配置与维护基线见 [`docs/AUTOMATION.md`](docs/AUTOMATION.md)。
 
-- `tools/daily_update.sh` 以 `audio/YYYY-MM-DD/manifest.json` 是否存在作为当天已完成标记；已完成不会重复生成/推送。
-- 多机器并发时用临时分支 `automation-lock/YYYY-MM-DD` 作为跨机器锁，完成后自动删除；异常锁 2 小时后自动接管。
+- **主方案**：`.github/workflows/daily-podcast.yml`，`schedule` 每天北京时间 08:30（cron `30 0 * * *`）在 `ubuntu-latest` 运行，用 `GITHUB_TOKEN` 推送；仓库需开启 Workflow permissions 的 Read and write。
+- 幂等：以 `audio/YYYY-MM-DD/manifest.json` 是否有效作为当天已完成标记，已完成跳过生成与推送。
+- 手动验证/补跑：Actions 页面 → `AI晨报双语播客每日更新` → Run workflow，可填 `target_date`(YYYY-MM-DD) 指定日期。
+- `tools/daily_update.sh` 与跨机器锁 `automation-lock/YYYY-MM-DD` 为原 WorkBuddy 方案的备用实现，当前主链路不再使用，但脚本保留可用。
 - 脚本从自身位置推导工作目录，不依赖固定 Windows 路径。
 - 以后自动化配置发生任何变更，必须同步更新 `docs/AUTOMATION.md` 并推送。
