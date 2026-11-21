@@ -4,75 +4,74 @@
 > 仓库：<https://github.com/Anywise666/ai-news-dashboard>  
 > GitHub Pages：<https://anywise666.github.io/ai-news-dashboard/>
 
-本文档是仓库内关于“AI 晨报双语播客生成与推送”的配置基线。**以后任何脚本、定时规则、路径、依赖或仓库变更，都必须同步更新本文档并推送到 GitHub。**
+本文档是仓库内关于"AI 晨报双语播客生成与推送"的配置基线。**以后任何脚本、定时规则、路径、依赖或仓库变更，都必须同步更新本文档并推送到 GitHub。**
 
 ---
 
 ## 1. 当前主方案概览
 
-当前主方案使用 **WorkBuddy 本地自动化**，不使用常开服务器。
+当前主方案使用 **GitHub Actions**（2026-11-21 由 WorkBuddy 本地自动化迁移而来）。不再依赖任何常开服务器或本机在线。
 
 ```text
-aihot API → 本地 gen_audio.py → 本地 audio/YYYY-MM-DD/ → GitHub main → GitHub Pages
+aihot API → GitHub Actions (ubuntu-latest) → gen_audio.py → audio/YYYY-MM-DD/ → GitHub main → GitHub Pages
 ```
 
 核心原则：
 
 - 页面本身在浏览器端实时拉取 `https://aihot.news/api/v1`，所以新闻内容每天会更新。
-- 预生成的中英双语 mp3 和 `manifest.json` 依赖自动化任务。
-- GitHub `main` 分支上的 `audio/YYYY-MM-DD/manifest.json` 是“当天已完成”的唯一事实源。
-- 任务幂等：已完成就跳过；多台机器并发时通过 Git 临时分支加锁。
-- 服务器部署方案仅作为备用，**当前未执行**。
+- 预生成的中英双语 mp3 和 `manifest.json` 由 GitHub Actions 每日定时任务生成。
+- GitHub `main` 分支上的 `audio/YYYY-MM-DD/manifest.json` 是"当天已完成"的唯一事实源。
+- 任务幂等：当天 manifest 已存在且有效就跳过生成与推送。
+- 公共仓库的 GitHub Actions 永久免费、不限分钟数，无需信用卡，也不受本机在线状态影响。
+- 服务器部署方案（第 6 节）与 WorkBuddy 本地自动化（第 2.4 节）均作为历史备用，**当前未启用**。
 
 ---
 
-## 2. WorkBuddy 自动化配置
+## 2. 自动化配置
 
-### 2.1 准点任务
+### 2.1 GitHub Actions（当前主方案）
 
 | 字段 | 值 |
 |---|---|
 | 名称 | `AI晨报双语播客每日更新` |
-| ID | `a31fad70-e425-4dc2-b2ab-e8ee0ee1bd43` |
+| 文件 | `.github/workflows/daily-podcast.yml` |
 | 状态 | `ACTIVE` |
-| 调度 | `FREQ=DAILY;BYHOUR=8;BYMINUTE=30` |
-| 工作目录 | `.`（工作区根目录） |
-| 工作区范围 | `workspace` |
-| 执行命令 | `bash "./audio-pipeline/daily_update.sh"` |
+| 调度 | `cron: '30 0 * * *'`（UTC 00:30 = 北京时间 08:30） |
+| 手动入口 | `workflow_dispatch`（Actions 页面 Run workflow） |
+| 运行器 | `ubuntu-latest` |
+| Python | `3.11`（actions/setup-python@v5，pip 缓存开启） |
+| 依赖 | `edge-tts` |
+| 推送方式 | `GITHUB_TOKEN`（需仓库 Settings → Actions → General → Workflow permissions 设为 **Read and write**） |
+| 并发控制 | `concurrency.group = podcast-daily`，`cancel-in-progress: false` |
 
-作用：每天北京时间 08:30 准点生成并推送当天音频。
+流程：checkout → 计算北京时间日期 → 检查当天 manifest → 未完成则 `python tools/gen_audio.py <日期>` → `git commit` + `git push origin HEAD:main`。
 
-### 2.2 上线补跑任务
+关键输出标记：
 
-| 字段 | 值 |
-|---|---|
-| 名称 | `AI晨报双语播客上线补跑检查` |
-| ID | `af8c52b6-579e-411d-9e6e-e802312cdb6e` |
-| 状态 | `ACTIVE` |
-| 调度 | `FREQ=HOURLY;INTERVAL=1` |
-| 工作目录 | `.`（工作区根目录） |
-| 工作区范围 | `workspace` |
-| 执行命令 | `bash "./audio-pipeline/daily_update.sh"` |
+- `ALREADY_DONE`：当天已完成，幂等跳过。
+- `NO_CHANGES_SKIP`：生成后无文件变化，跳过提交。
+- `PUSH_OK`：本次成功推送。
 
-作用：登录同一 WorkBuddy 账号的机器上线后，在下一个整点检查当天任务是否已完成；未完成则补跑。
+> 注意：GitHub Actions 的 `schedule` 只接受 UTC，故北京时间 08:30 写作 UTC 00:30。高峰期定时可能延迟数分钟；公共仓库若连续 60 天无提交，定时任务会被自动停用（本仓库几乎每天有音频推送，不会触发）。用 `GITHUB_TOKEN` 推送的 commit 不会再次触发本 workflow，无递归风险。
 
-> 说明：WorkBuddy 定时规则没有“开机瞬间触发”选项，因此用“每小时幂等检查”近似实现。它不会在开机瞬间立即执行，但会在下一个整点补跑。
+### 2.2 权限配置（一次性）
 
-### 2.3 自动化提示词要点
+仓库页面 → **Settings** → 左侧 **Actions → General** → 底部 **Workflow permissions** → 选 **Read and write permissions** → Save。（URL：`<repo>/settings/actions`）
 
-两个任务的提示词都要求：
+### 2.3 手动验证
 
-- 只运行一次 `daily_update.sh`，同一轮不要重复执行。
-- 将以下输出视为正常跳过，不报错：
-  - `ALREADY_DONE_REMOTE_RAW`
-  - `ALREADY_DONE_REMOTE_GIT`
-  - `ALREADY_DONE_REMOTE_AFTER_LOCK`
-  - `REMOTE_LOCK_SKIP`
-  - `NO_REPORT_SKIP`
-  - `NO_CHANGES_SKIP`
-  - `ANOTHER_MACHINE_DONE`
-- 只有 `PUSH_OK` 或 `PUSH_OK_AFTER_REBASE` 表示本次成功推送。
-- 只有 `PUSH_FAILED` 才报告错误原因。
+Actions 页 → 左侧选 `AI晨报双语播客每日更新` → 右侧 **Run workflow** → 手动跑一次。绿色对勾且日志出现 `ALREADY_DONE` 或 `PUSH_OK` 即通。
+
+### 2.4 WorkBuddy 本地自动化（已停用，历史记录）
+
+迁移前使用两个 WorkBuddy 本地任务，现已在 GitHub Actions 接管后停用：
+
+| 名称 | 原 ID | 原调度 | 状态 |
+|---|---|---|---|
+| `AI晨报双语播客每日更新` | `a31fad70-e425-4dc2-b2ab-e8ee0ee1bd43` | `FREQ=DAILY;BYHOUR=8;BYMINUTE=30` | 已停用 |
+| `AI晨报双语播客上线补跑检查` | `af8c52b6-579e-411d-9e6e-e802312cdb6e` | `FREQ=HOURLY;INTERVAL=1` | 已停用 |
+
+二者执行命令均为 `bash "./audio-pipeline/daily_update.sh"`。原提示词约定：只运行一次脚本，`ALREADY_DONE_*` / `REMOTE_LOCK_SKIP` / `NO_REPORT_SKIP` / `NO_CHANGES_SKIP` / `ANOTHER_MACHINE_DONE` 视为正常跳过，仅 `PUSH_OK` / `PUSH_OK_AFTER_REBASE` 表示成功，`PUSH_FAILED` 报错。
 
 ---
 
@@ -82,8 +81,9 @@ aihot API → 本地 gen_audio.py → 本地 audio/YYYY-MM-DD/ → GitHub main �
 
 | 路径 | 说明 |
 |---|---|
-| `tools/daily_update.sh` | 跨机器幂等补跑脚本：生成音频 → 克隆仓库 → 拷贝页面与音频 → commit → push |
-| `tools/gen_audio.py` | 音频生成脚本，使用 `edge-tts` |
+| `.github/workflows/daily-podcast.yml` | **当前主方案**：GitHub Actions 每日定时生成并推送播客音频 |
+| `tools/daily_update.sh` | 跨机器幂等补跑脚本（原 WorkBuddy 任务使用，现备用）：生成音频 → 克隆仓库 → 拷贝页面与音频 → commit → push |
+| `tools/gen_audio.py` | 音频生成脚本，使用 `edge-tts`（Actions 直接复用） |
 | `index.html` | GitHub Pages 首页，日历档案 + 双语播客版 |
 | `audio/YYYY-MM-DD/` | 每日预生成的中英双语 mp3 + `manifest.json` |
 | `README.md` | 仓库总说明 |
@@ -271,10 +271,11 @@ sudo systemctl list-timers | grep ai-news-dashboard
 
 发生以下任一变更时，必须更新本文档并提交到 GitHub：
 
+- 修改 `.github/workflows/daily-podcast.yml`（调度、权限、步骤、并发等）
 - 修改 `tools/daily_update.sh` 或 `audio-pipeline/daily_update.sh`
 - 修改 `tools/gen_audio.py` 或 `audio-pipeline/gen_audio.py`
-- 修改 WorkBuddy 自动化的名称、ID、调度规则、提示词、状态或工作目录
-- 修改 GitHub 仓库名、分支、Pages 地址或 SSH 部署方式
+- 修改 GitHub Actions / WorkBuddy 自动化的名称、ID、调度规则、提示词、状态或工作目录
+- 修改 GitHub 仓库名、分支、Pages 地址、Workflow permissions 或 SSH 部署方式
 - 修改音频保留天数、TTS 音色、API 域名或数据源
 - 启用 / 禁用服务器备用方案
 - 新增或取消跨机器锁机制
@@ -324,8 +325,9 @@ https://github.com/Anywise666/ai-news-dashboard/blob/main/docs/AUTOMATION.md
 
 ## 8. 已知限制
 
-- WorkBuddy 当前不支持“开机瞬间触发”，所以上线补跑依赖每小时检查。
+- GitHub Actions `schedule` 只认 UTC，且有数分钟延迟；非精确准点。
 - 英文原题来自 `/api/v1/items`，仅覆盖近 7 天；历史日期音频会降级为中文。
 - GitHub Pages CDN 更新通常约 20 秒生效。
-- 多机器同时补跑时，只有拿到锁的机器会真正生成和推送；其他机器会跳过。
-- 服务器 cron / systemd 方案目前是备用，尚未启用。
+- 公共仓库连续 60 天无提交会被自动暂停定时任务（本仓库日常推送不会触发）。
+- 原多机器锁机制随 WorkBuddy 任务停用而不再参与主链路；`daily_update.sh` 保留备用时仍可用。
+- 服务器 cron / systemd 方案与 WorkBuddy 本地任务均为历史备用，当前未启用。
