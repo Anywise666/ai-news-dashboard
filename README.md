@@ -20,9 +20,11 @@
 | 文件 | 说明 |
 |------|------|
 | `index.html` | 日历档案 + 双语播客版(默认首页) |
-| `audio/YYYY-MM-DD/` | 每日预生成的双语 mp3 + manifest.json(最近30天) |
-| `.github/workflows/daily-podcast.yml` | **当前主方案**：GitHub Actions 每日定时生成并推送音频(北京时间 8:30) |
+| `audio/YYYY-MM-DD/` | 每日预生成的双语 mp3 + brief 速览 + manifest.json(最近30天) |
+| `feed.xml` | 播客 RSS 订阅源(最近60期，含 brief 音频 enclosure) |
+| `.github/workflows/daily-podcast.yml` | **当前主方案**：GitHub Actions 每日定时生成并推送音频+feed(北京时间 8:30) |
 | `tools/gen_audio.py` | 音频生成脚本(edge-tts)，由 Actions 直接复用 |
+| `tools/gen_feed.py` | 播客 RSS 生成脚本(纯标准库)，由 Actions 每次运行后重建 feed.xml |
 | `tools/daily_update.sh` | 跨机器幂等补跑脚本(原 WorkBuddy 任务使用，现备用) |
 | `docs/AUTOMATION.md` | 自动化配置与维护基线(含 GitHub Actions 配置与备用服务器方案) |
 | `ai-daily-2026-08-01.html` | 2026-08-01 单文件日报归档快照 |
@@ -41,6 +43,7 @@
 - **预生成音频(微信可用)**:每天自动生成并托管在仓库 `audio/` 目录,页面优先播放 mp3,微信内可直接听;微软神经音色,音质优于浏览器 TTS。仅保留最近 30 天。
 - 无预生成音频时(如历史日期)回退浏览器 TTS;微信内不支持则提示在浏览器中打开。
 - **⚡ 90 秒速览**:顶部工具栏「90秒速览」按钮，串读当天头条 + 各板块首条，`gen_audio.py` 生成 `brief_zh.mp3`(约 400 字/90 秒)；无预生成音频时回退 TTS 串读。赶时间时一键听完全天要点。
+- **📻 播客订阅**:顶部「订阅」按钮展示 RSS 地址（`feed.xml`），复制到小宇宙/Apple 播客/Spotify 等客户端即可每天自动更新。`feed.xml` 每期以日期为标题、enclosure 指向 `brief_zh.mp3`，由 Actions 每次运行后重建，保留最近 60 期。
 - **播放控制条**:播放中可切换倍速(0.75x/1x/1.25x/1.5x/2x)、设置定时关闭(15/30/60 分钟自动停止)、「↻ 重听」从头播放当前条目；倍速偏好持久化到 localStorage。
 - 生成由 `tools/gen_audio.py` 完成(edge-tts 免费)；由 **GitHub Actions** 每天北京时间 8:30 自动运行并推送 main，当天已完成会自动跳过。整条链路在 GitHub 云端完成，不依赖任何机器在线（原 WorkBuddy 本地任务与每小时补跑已停用，改为备用）。
 

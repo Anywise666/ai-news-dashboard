@@ -63,16 +63,18 @@ jobs:
         if: steps.chk.outputs.done == 'false'
         run: python tools/gen_audio.py "${{ steps.dt.outputs.today }}"
 
+      - name: 生成播客 RSS
+        run: python tools/gen_feed.py
+
       - name: 提交并推送
-        if: steps.chk.outputs.done == 'false'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add audio/
+          git add audio/ feed.xml
           if git diff --cached --quiet; then
             echo "NO_CHANGES_SKIP"
           else
-            git commit -m "Daily podcast audio: ${{ steps.dt.outputs.today }}"
+            git commit -m "Daily podcast audio + feed: ${{ steps.dt.outputs.today }}"
             git push origin HEAD:main
             echo "PUSH_OK"
           fi

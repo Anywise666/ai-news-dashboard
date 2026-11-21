@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>AI 晨报 · 90秒速览播客</title>
+    <link>https://anywise666.github.io/ai-news-dashboard</link>
+    <description><![CDATA[每天一期，90 秒听懂当天最重要的 AI 资讯。头条 + 各板块要点，中英双语。]]></description>
+    <language>zh-CN</language>
+    <itunes:author>AI 晨报</itunes:author>
+    <itunes:summary><![CDATA[每天一期，90 秒听懂当天最重要的 AI 资讯。头条 + 各板块要点，中英双语。]]></itunes:summary>
+    <itunes:explicit>false</itunes:explicit>
+    <itunes:category text="Technology" />
+    <atom:link href="https://anywise666.github.io/ai-news-dashboard/feed.xml" rel="self" type="application/rss+xml" />
+    <ttl>60</ttl>
+    <item>
+      <title><![CDATA[AI 晨报速览 · 11月21日]]></title>
+      <link>https://anywise666.github.io/ai-news-dashboard/index.html</link>
+      <description><![CDATA[90 秒速览当天 AI 要闻。 今日头条：Thinking Machines Lab 发布可跑在笔记本上的开源权重模型 Inkling 2 Mini 完整日报：https://anywise666.github.io/ai-news-dashboard/index.html]]></description>
+      <guid isPermaLink="false">ai-news-daily-2026-11-21</guid>
+      <pubDate>Sat, 21 Nov 2026 08:30:00 +0800</pubDate>
+      <enclosure url="https://anywise666.github.io/ai-news-dashboard/audio/2026-11-21/brief_zh.mp3" length="373680" type="audio/mpeg" />
+      <itunes:duration>90</itunes:duration>
+      <itunes:title><![CDATA[AI 晨报速览 · 11月21日]]></itunes:title>
+      <itunes:summary><![CDATA[90 秒速览当天 AI 要闻。 今日头条：Thinking Machines Lab 发布可跑在笔记本上的开源权重模型 Inkling 2 Mini 完整日报：https://anywise666.github.io/ai-news-dashboard/index.html]]></itunes:summary>
+      <itunes:episodeType>full</itunes:episodeType>
+    </item>
+    <item>
+      <title><![CDATA[AI 晨报速览 · 11月20日]]></title>
+      <link>https://anywise666.github.io/ai-news-dashboard/index.html</link>
+      <description><![CDATA[90 秒速览当天 AI 要闻。 今日头条：Anthropic 登陆纳斯达克，开盘价 111 美元较发行价高出 33% 完整日报：https://anywise666.github.io/ai-news-dashboard/index.html]]></description>
+      <guid isPermaLink="false">ai-news-daily-2026-11-20</guid>
+      <pubDate>Fri, 20 Nov 2026 08:30:00 +0800</pubDate>
+      <enclosure url="https://anywise666.github.io/ai-news-dashboard/audio/2026-11-20/brief_zh.mp3" length="414288" type="audio/mpeg" />
+      <itunes:duration>90</itunes:duration>
+      <itunes:title><![CDATA[AI 晨报速览 · 11月20日]]></itunes:title>
+      <itunes:summary><![CDATA[90 秒速览当天 AI 要闻。 今日头条：Anthropic 登陆纳斯达克，开盘价 111 美元较发行价高出 33% 完整日报：https://anywise666.github.io/ai-news-dashboard/index.html]]></itunes:summary>
+      <itunes:episodeType>full</itunes:episodeType>
+    </item>
+  </channel>
+</rss>

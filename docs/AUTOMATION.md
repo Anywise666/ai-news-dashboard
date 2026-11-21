@@ -44,7 +44,9 @@ aihot API → GitHub Actions (ubuntu-latest) → gen_audio.py → audio/YYYY-MM-
 | 推送方式 | `GITHUB_TOKEN`（需仓库 Settings → Actions → General → Workflow permissions 设为 **Read and write**） |
 | 并发控制 | `concurrency.group = podcast-daily`，`cancel-in-progress: false` |
 
-流程：checkout → 计算北京时间日期 → 检查当天 manifest → 未完成则 `python tools/gen_audio.py <日期>` → `git commit` + `git push origin HEAD:main`。
+流程：checkout → 计算北京时间日期 → 检查当天 manifest → 未完成则 `python tools/gen_audio.py <日期>` → 每次都运行 `python tools/gen_feed.py` 重建播客 RSS → `git add audio/ feed.xml` → `git commit` + `git push origin HEAD:main`。
+
+> feed 与音频在同一提交中推送：即使当天音频已完成（幂等跳过），feed 步骤仍会运行，可在 feed 缺失/损坏时自愈；无变化时输出 `NO_CHANGES_SKIP`。
 
 关键输出标记：
 
@@ -89,8 +91,10 @@ Actions 页 → 左侧选 `AI晨报双语播客每日更新` → 右侧 **Run wo
 | `.github/workflows/daily-podcast.yml` | **当前主方案**：GitHub Actions 每日定时生成并推送播客音频 |
 | `tools/daily_update.sh` | 跨机器幂等补跑脚本（原 WorkBuddy 任务使用，现备用）：生成音频 → 克隆仓库 → 拷贝页面与音频 → commit → push |
 | `tools/gen_audio.py` | 音频生成脚本，使用 `edge-tts`（Actions 直接复用）；同时生成 90 秒速览 `brief_zh.mp3` |
-| `index.html` | GitHub Pages 首页，日历档案 + 双语播客 + 90 秒速览 + 阅读工具 |
+| `tools/gen_feed.py` | 播客 RSS 生成脚本（纯标准库），扫描 audio/ 生成 feed.xml，Actions 每次运行后重建 |
+| `index.html` | GitHub Pages 首页，日历档案 + 双语播客 + 90 秒速览 + 播客订阅 + 阅读工具 |
 | `audio/YYYY-MM-DD/` | 每日预生成的中英双语 mp3 + `brief_zh.mp3`(速览) + `manifest.json`(含 `brief` 字段) |
+| `feed.xml` | 播客订阅源（RSS 2.0 + iTunes），每期 enclosure 指向 brief_zh.mp3，保留最近 60 期 |
 | `README.md` | 仓库总说明 |
 | `docs/AUTOMATION.md` | 本文档，自动化配置与维护基线 |
 
@@ -279,6 +283,7 @@ sudo systemctl list-timers | grep ai-news-dashboard
 - 修改 `.github/workflows/daily-podcast.yml`（调度、权限、步骤、并发等）
 - 修改 `tools/daily_update.sh` 或 `audio-pipeline/daily_update.sh`
 - 修改 `tools/gen_audio.py` 或 `audio-pipeline/gen_audio.py`
+- 修改 `tools/gen_feed.py` 或 `feed.xml` 的字段 / 期数 / 站点地址
 - 修改 GitHub Actions / WorkBuddy 自动化的名称、ID、调度规则、提示词、状态或工作目录
 - 修改 GitHub 仓库名、分支、Pages 地址、Workflow permissions 或 SSH 部署方式
 - 修改音频保留天数、TTS 音色、API 域名或数据源
