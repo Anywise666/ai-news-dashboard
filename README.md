@@ -22,6 +22,7 @@
 | `index.html` | 日历档案 + 双语播客版(默认首页) |
 | `audio/YYYY-MM-DD/` | 每日预生成的双语 mp3 + manifest.json(最近30天) |
 | `tools/gen_audio.py` | 音频生成脚本(edge-tts) |
+| `tools/daily_update.sh` | 跨机器幂等补跑脚本：生成音频并推送 main |
 | `ai-daily-2026-08-01.html` | 2026-08-01 单文件日报归档快照 |
 
 ## 功能
@@ -37,7 +38,7 @@
 - 英文原题来自 `/api/v1/items`(仅覆盖近 7 天,约 77% 条目有英文原题),历史日期无英文原题时自动降级为纯中文朗读。
 - **预生成音频(微信可用)**:每天自动生成并托管在仓库 `audio/` 目录,页面优先播放 mp3,微信内可直接听;微软神经音色,音质优于浏览器 TTS。仅保留最近 30 天。
 - 无预生成音频时(如历史日期)回退浏览器 TTS;微信内不支持则提示在浏览器中打开。
-- 生成由 `tools/gen_audio.py` 完成(edge-tts 免费),自动化每天 8:30 执行 `audio-pipeline/daily_update.sh`。
+- 生成由 `tools/gen_audio.py` 完成(edge-tts 免费)；`tools/daily_update.sh` 负责生成后推送 main。自动化每天 8:30 执行，同时登录同一 WorkBuddy 账号的机器上线后每小时检查补跑，当天已完成会自动跳过。
 
 ## 技术说明
 
@@ -51,3 +52,8 @@
 更新 `index.html` 后:
 - GitHub Pages:push 到 main 自动部署(约 20 秒生效)。
 - 内置发布:在「设置—数据管理—应用」中重新发布目录(链接会变)。
+
+### 自动化补跑
+- `tools/daily_update.sh` 以 `audio/YYYY-MM-DD/manifest.json` 是否存在作为当天已完成标记；已完成不会重复生成/推送。
+- 多机器并发时用临时分支 `automation-lock/YYYY-MM-DD` 作为跨机器锁，完成后自动删除；异常锁 2 小时后自动接管。
+- 脚本从自身位置推导工作目录，不依赖固定 Windows 路径。
