@@ -3,6 +3,7 @@
 """
 AI 晨报双语播客音频生成器
 - 拉取 aihot 当日日报，为头条 + 每条卡片生成中英双语音频
+- 额外生成「90 秒速览」brief_zh.mp3（头条 + 各板块首条串读）
 - 写入 audio/YYYY-MM-DD/ 目录 + manifest.json
 - 清理超过保留期的旧目录
 依赖: pip install edge-tts
@@ -123,6 +124,55 @@ def build_tts_items(report, en_map):
     return items
 
 
+def cut_cn(s, n):
+    """按字符截断，超出加省略号"""
+    s = clean_text(s)
+    return s if len(s) <= n else s[:n].rstrip("，。、；： ") + "…"
+
+
+def build_brief_script(report, date):
+    """生成「90 秒速览」中文串读稿：开场 + 头条 + 各板块首条 + 收尾。
+    控制总长度约 400 字（Xiaoxiao +0% 约合 90~100 秒）。"""
+    try:
+        dt = datetime.strptime(date, "%Y-%m-%d")
+        dcn = "%d年%d月%d日" % (dt.year, dt.month, dt.day)
+    except Exception:
+        dcn = date
+    parts = ["欢迎收听今日 AI 晨报速览，%s。" % dcn]
+
+    lead = report.get("lead") or {}
+    sections = [s for s in (report.get("sections") or []) if s.get("items")]
+    parts.append("以下是今天最值得关注的 %d 条 AI 资讯。" % (1 + len(sections)))
+
+    # 头条
+    lt = cut_cn(lead.get("title") or "", 34)
+    lp = cut_cn(lead.get("leadParagraph") or "", 48)
+    if lt:
+        parts.append("今日头条。" + lt + ("。" + lp if lp else ""))
+
+    # 每个板块取第一条
+    for sec in sections:
+        it = (sec.get("items") or [0])[0]
+        label = clean_text(sec.get("label") or sec.get("title") or sec.get("name") or "")
+        t = cut_cn(it.get("title") or "", 32)
+        sm = cut_cn(it.get("summary") or "", 26)
+        seg = (label + "。" if label else "") + t
+        if sm:
+            seg += "。" + sm
+        parts.append(seg)
+
+    outro = "以上就是今天的 AI 晨报速览，更多详细内容请查看晨报页面。感谢收听。"
+    body = "".join(parts)
+    # 硬上限保护：只裁剪正文，保证收尾完整且不与正文重复
+    if len(body) + len(outro) > 430:
+        body = body[:430 - len(outro)]
+        p = body.rfind("。")
+        if p > 180:
+            body = body[:p + 1]
+        body = body.rstrip("，。、；： ")
+    return body + "。" + outro if body else outro
+
+
 def cleanup_old():
     """删除超过保留期的音频目录"""
     try:
@@ -186,7 +236,16 @@ async def main():
             idx + 1, len(items), it["title"][:22],
             "Y" if "zh" in entry else "N", "Y" if "en" in entry else "-"))
 
-    with open(os.path.join(outdir, "manifest.json"), "w", encoding="utf-8") as f:
+    # 90 秒速览：头条 + 各板块首条串读
+    brief_script = build_brief_script(report, date)
+    brief_file = "brief_zh.mp3"
+    if await synth(brief_script, VOICE_ZH, os.path.join(outdir, brief_file)):
+        manifest["brief"] = brief_file
+        print("  [brief] 速览稿 %d 字 -> %s" % (len(brief_script), brief_file))
+    else:
+        print("  [brief] 生成失败，前端将回退 TTS 朗读")
+
+    with open(os.path.join(outdir, "manifest.json"), "w", encoding="utf-8", newline="\n") as f:
         json.dump(manifest, f, ensure_ascii=False, indent=2)
 
     cleanup_old()

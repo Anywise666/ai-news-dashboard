@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI 晨报 · 日历档案</title>
-<meta name="wb-version" content="2026-11-21-6-search-fav-share-theme">
+<meta name="wb-version" content="2026-11-21-7-brief-playback-controls">
 <style>
   :root{
     --bg:#0b0f1a; --card:rgba(255,255,255,.045);
@@ -141,6 +141,16 @@
   .audio-bar .ab-title{font-size:13px;font-weight:700;color:#dce6ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .audio-bar .ab-phase{font-size:12px;color:var(--mut);margin-top:2px}
   .audio-bar button{background:var(--accent);color:#0b0f1a;border:none;border-radius:9px;padding:7px 14px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .audio-bar .ab-ctrl{background:rgba(255,255,255,.09);color:var(--txt);border:1px solid var(--line);
+    font-size:12px;padding:6px 10px;min-width:46px}
+  .audio-bar .ab-ctrl:hover{border-color:rgba(110,168,254,.6);color:#fff}
+  .audio-bar .ab-ctrl.on{background:rgba(110,168,254,.22);border-color:rgba(110,168,254,.6);color:#9cc4ff}
+  body.theme-light .audio-bar .ab-ctrl{background:rgba(15,23,42,.06);color:#334155}
+  body.theme-light .audio-bar .ab-ctrl:hover,body.theme-light .audio-bar .ab-ctrl.on{color:#1d4ed8;border-color:#93c5fd}
+  body.theme-light .audio-bar .ab-title{color:#1e293b}
+  .tb-btn.brief{border-color:rgba(251,191,36,.5);color:#fbbf24;background:rgba(251,191,36,.1)}
+  .tb-btn.brief:hover{background:rgba(251,191,36,.18);border-color:#fbbf24}
+  body.theme-light .tb-btn.brief{color:#b45309;border-color:#fcd34d;background:rgba(251,191,36,.16)}
   .lead-card{background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(255,255,255,.03));
     border:1px solid rgba(251,191,36,.3);border-radius:16px;padding:20px 22px;margin:0 0 8px}
   .lead-card .lk{font-size:12px;color:var(--hot);font-weight:700;letter-spacing:.1em}
@@ -163,6 +173,9 @@
     .hero{padding:26px 20px}.wrap{padding:0 14px}.cal{padding:16px 12px}
     .nav a{padding:6px 10px;font-size:13px}
     .cal-cell{min-height:34px}.cal-cell .d{font-size:12px}
+    .audio-bar{flex-wrap:wrap;gap:8px;padding:10px 12px}
+    .audio-bar .ab-info{min-width:120px}
+    .audio-bar .ab-ctrl{padding:5px 7px;min-width:40px;font-size:11px}
   }
 
   /* ===== v6 增强：工具栏 / 搜索 / 收藏 / 已读 / 分享 / 主题字号 ===== */
@@ -293,6 +306,7 @@
       <span class="clr" id="searchClear" title="清除">×</span>
       <div class="sr-box" id="searchResults"></div>
     </div>
+    <button class="tb-btn brief" id="briefBtn" title="播放90秒速览播客">⚡ 90秒速览</button>
     <button class="tb-btn" id="favBtn" title="我的收藏">☆ 收藏 <span class="tb-stat" id="favCount">0</span></button>
     <button class="tb-btn" id="shareDayBtn" title="分享当天日报">↗ 分享本日</button>
     <div class="tb-sep"></div>
@@ -336,6 +350,9 @@
     <div class="ab-title" id="abTitle"></div>
     <div class="ab-phase" id="abPhase"></div>
   </div>
+  <button class="ab-ctrl" id="abRate" title="播放倍速">1.0x</button>
+  <button class="ab-ctrl" id="abSleep" title="定时关闭">☾ 关</button>
+  <button class="ab-ctrl" id="abReplay" title="从头重听">↻ 重听</button>
   <button id="abStop">停止</button>
 </div>
 
@@ -391,12 +408,13 @@
 
   // ===== 本地偏好存储（localStorage，容错）=====
   var LS_KEY = 'aih_news_dashboard_prefs_v1';
-  var PREFS = { theme:'dark', fs:'normal', favs:{}, reads:{} };
+  var PREFS = { theme:'dark', fs:'normal', rate:1, favs:{}, reads:{} };
   try{
     var raw = localStorage.getItem(LS_KEY);
     if(raw){ var p = JSON.parse(raw); if(p && typeof p==='object'){
       if(p.theme==='light'||p.theme==='dark') PREFS.theme=p.theme;
       if(p.fs==='small'||p.fs==='normal'||p.fs==='large') PREFS.fs=p.fs;
+      if([0.75,1,1.25,1.5,2].indexOf(Number(p.rate))>=0) PREFS.rate=Number(p.rate);
       if(p.favs && typeof p.favs==='object') PREFS.favs=p.favs;
       if(p.reads && typeof p.reads==='object') PREFS.reads=p.reads;
     }}
@@ -481,10 +499,13 @@
   function enTitleOf(url){ return EN_MAP[itemIdFromUrl(url)] || ''; }
 
   // ===== 播客引擎（优先预生成音频，回退 Web Speech TTS）=====
-  var POD = { speaking:false, key:null, btn:null, mode:null };
+  var POD = { speaking:false, key:null, btn:null, mode:null, replayFn:null };
   var AUDIO_MANIFEST = null;   // 当前日期 audio/<date>/manifest.json
   var AUDIO_BASE = 'audio/';   // 相对发行目录
   var AUDIO_DATE = null;
+  var SLEEP_MIN = 0;           // 定时关闭分钟数：0=关闭
+  var SLEEP_TIMER = null;      // 定时关闭句柄
+  var RATES = [0.75, 1, 1.25, 1.5, 2];
   function showGuide(){ document.getElementById('guideMask').classList.add('show'); }
   function hideGuide(){ document.getElementById('guideMask').classList.remove('show'); }
   function pickVoice(langPrefix){
@@ -510,13 +531,43 @@
     return tracks.length?tracks:null;
   }
   function markPlaying(btn, on){ if(btn){ btn.classList.toggle('playing',on); btn.innerHTML=on?'<span class="ico">⏸</span> 播放中':'<span class="ico">▶</span> 听播客'; } }
+  function applyRateUI(){
+    var b=document.getElementById('abRate'); if(b) b.textContent=PREFS.rate+'x';
+  }
+  function clearSleep(){ if(SLEEP_TIMER){ clearTimeout(SLEEP_TIMER); SLEEP_TIMER=null; } }
+  function armSleep(){
+    clearSleep();
+    if(!SLEEP_MIN || !POD.speaking) return;
+    SLEEP_TIMER=setTimeout(function(){ stopPod(); toast('定时关闭：已停止播放'); }, SLEEP_MIN*60*1000);
+  }
   function stopPod(){
     if('speechSynthesis' in window) window.speechSynthesis.cancel();
     var a=document.getElementById('podAudio'); try{a.pause();a.currentTime=0;}catch(e){}
     a.onended=null; a.onerror=null;
-    POD.speaking=false; POD.key=null; POD.btn=null; POD.mode=null;
+    clearSleep();
+    POD.speaking=false; POD.key=null; POD.btn=null; POD.mode=null; POD.replayFn=null;
     document.getElementById('audioBar').classList.remove('show');
     document.querySelectorAll('.listen.playing').forEach(function(b){ markPlaying(b,false); });
+  }
+  function replayPod(){
+    if(!POD.speaking || !POD.replayFn){ toast('当前没有正在播放的内容'); return; }
+    POD.replayFn(); armSleep(); toast('已从头重听');
+  }
+  function cycleRate(){
+    var i=RATES.indexOf(Number(PREFS.rate)); if(i<0) i=1;
+    PREFS.rate=RATES[(i+1)%RATES.length]; savePrefs(); applyRateUI();
+    var a=document.getElementById('podAudio'); try{ a.playbackRate=PREFS.rate; }catch(e){}
+    if(POD.mode==='tts' && POD.replayFn){ POD.replayFn(); }
+    toast('播放倍速 '+PREFS.rate+'x');
+  }
+  function cycleSleep(){
+    var opts=[0,15,30,60]; var i=opts.indexOf(SLEEP_MIN); if(i<0) i=0;
+    SLEEP_MIN=opts[(i+1)%opts.length];
+    var b=document.getElementById('abSleep');
+    b.textContent = SLEEP_MIN ? ('☾ '+SLEEP_MIN+'分') : '☾ 关';
+    b.classList.toggle('on', SLEEP_MIN>0);
+    if(SLEEP_MIN){ armSleep(); toast(SLEEP_MIN+' 分钟后自动停止'); }
+    else { clearSleep(); toast('已关闭定时'); }
   }
   // 播放预生成音频队列（微信内可用）
   function playAudioQueue(key, btn, title, tracks){
@@ -528,17 +579,20 @@
     bar.classList.add('show');
     var a=document.getElementById('podAudio');
     var i=0;
+    POD.replayFn=function(){ i=0; next(); };
     function next(){
       if(i>=tracks.length){ stopPod(); return; }
       var t=tracks[i];
       document.getElementById('abIco').textContent=t.flag;
       document.getElementById('abPhase').textContent='('+(i+1)+'/'+tracks.length+') '+t.label;
-      a.src=t.url; a.onended=function(){ i++; next(); };
+      a.src=t.url;
+      try{ a.playbackRate=PREFS.rate; }catch(e){}
+      a.onended=function(){ i++; next(); };
       a.onerror=function(){ i++; next(); };
       var p=a.play();
       if(p && p.catch) p.catch(function(){ /* 自动播放被拦截，用户已点击按钮一般允许 */ });
     }
-    next();
+    next(); armSleep();
   }
   // 回退浏览器 TTS
   function speakQueue(key, btn, title, parts){
@@ -550,6 +604,7 @@
     document.getElementById('abTitle').textContent=title;
     bar.classList.add('show');
     var idx=0;
+    POD.replayFn=function(){ idx=0; next(); };
     function next(){
       if(idx>=parts.length){ stopPod(); return; }
       var item=parts[idx];
@@ -557,11 +612,29 @@
       document.getElementById('abPhase').textContent='('+(idx+1)+'/'+parts.length+') '+(item.lang.indexOf('zh')===0?'中文':'English')+' · '+item.label;
       var u=new SpeechSynthesisUtterance(item.text);
       u.lang=item.lang; var voice=pickVoice(item.lang.indexOf('zh')===0?'zh':'en'); if(voice) u.voice=voice;
-      u.rate=item.lang.indexOf('zh')===0?1.0:0.92; u.pitch=1.0; u.volume=1.0;
+      var base=item.lang.indexOf('zh')===0?1.0:0.92;
+      u.rate=Math.max(0.1,Math.min(10, base*PREFS.rate)); u.pitch=1.0; u.volume=1.0;
       u.onend=function(){ idx++; next(); }; u.onerror=function(){ idx++; next(); };
       window.speechSynthesis.speak(u);
     }
-    next();
+    next(); armSleep();
+  }
+  // 90 秒速览：优先播放预生成 brief_zh.mp3，回退 TTS 串读
+  function playBrief(){
+    var date=AUDIO_DATE || STATE.selectedDate || STATE.today;
+    var briefUrl = (AUDIO_MANIFEST && AUDIO_MANIFEST.brief) ? (AUDIO_BASE+date+'/'+AUDIO_MANIFEST.brief) : null;
+    if(briefUrl){
+      playAudioQueue('__brief__', null, '90秒速览 · '+fmt(date),
+        [{url:briefUrl, flag:'⚡', label:'90 秒速览 · 头条 + 各板块首条'}]);
+      return;
+    }
+    var rp=REPORT_CACHE[date] || REPORT_CACHE[STATE.selectedDate];
+    if(!rp || !rp.sections){ toast('速览音频未就绪，请先打开当天日报'); return; }
+    var parts=[{text:'欢迎收听今日 AI 晨报 90 秒速览。',lang:'zh-CN',label:'开场'}];
+    if(rp.lead && rp.lead.title) parts.push({text:'今日头条。'+rp.lead.title+'。'+(rp.lead.leadParagraph||''),lang:'zh-CN',label:'头条'});
+    (rp.sections||[]).forEach(function(s){ if(s.items&&s.items.length){ var it=s.items[0]; parts.push({text:(s.label||'')+'。'+it.title+'。'+(it.summary||''),lang:'zh-CN',label:s.label||'要点'}); } });
+    parts.push({text:'以上就是今天的速览，感谢收听。',lang:'zh-CN',label:'收尾'});
+    speakQueue('__brief__', null, '90秒速览 · '+fmt(date), parts);
   }
   function makePodcast(title, summary, enTitle){
     var parts=[];
@@ -1105,6 +1178,13 @@
   document.getElementById('nextM').onclick=function(){moveMonth(1);};
   document.getElementById('todayBtn').onclick=function(){ selectDate(STATE.today); };
   document.getElementById('abStop').onclick=function(){ stopPod(); };
+  document.getElementById('abRate').onclick=cycleRate;
+  document.getElementById('abSleep').onclick=cycleSleep;
+  document.getElementById('abReplay').onclick=replayPod;
+  document.getElementById('briefBtn').onclick=function(){
+    if(POD.speaking && POD.key==='__brief__'){ stopPod(); return; }
+    playBrief();
+  };
   document.getElementById('guideClose').onclick=function(){ hideGuide(); };
   document.getElementById('guideMask').onclick=function(e){ if(e.target===this) hideGuide(); };
   window.addEventListener('beforeunload', function(){ if('speechSynthesis' in window) window.speechSynthesis.cancel(); });
@@ -1169,7 +1249,7 @@
   document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ closeShare(); document.getElementById('searchResults').classList.remove('show'); } });
 
   async function init(){
-    applyTheme(); applyFs(); updateFavCount();
+    applyTheme(); applyFs(); applyRateUI(); updateFavCount();
     document.getElementById('calStatus').textContent='正在载入历史索引…';
     showMainLoading('正在加载 AI 晨报档案…');
     // 英文原题映射与索引并行加载，不阻塞主流程

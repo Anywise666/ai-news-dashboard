@@ -88,9 +88,9 @@ Actions 页 → 左侧选 `AI晨报双语播客每日更新` → 右侧 **Run wo
 |---|---|
 | `.github/workflows/daily-podcast.yml` | **当前主方案**：GitHub Actions 每日定时生成并推送播客音频 |
 | `tools/daily_update.sh` | 跨机器幂等补跑脚本（原 WorkBuddy 任务使用，现备用）：生成音频 → 克隆仓库 → 拷贝页面与音频 → commit → push |
-| `tools/gen_audio.py` | 音频生成脚本，使用 `edge-tts`（Actions 直接复用） |
-| `index.html` | GitHub Pages 首页，日历档案 + 双语播客版 |
-| `audio/YYYY-MM-DD/` | 每日预生成的中英双语 mp3 + `manifest.json` |
+| `tools/gen_audio.py` | 音频生成脚本，使用 `edge-tts`（Actions 直接复用）；同时生成 90 秒速览 `brief_zh.mp3` |
+| `index.html` | GitHub Pages 首页，日历档案 + 双语播客 + 90 秒速览 + 阅读工具 |
+| `audio/YYYY-MM-DD/` | 每日预生成的中英双语 mp3 + `brief_zh.mp3`(速览) + `manifest.json`(含 `brief` 字段) |
 | `README.md` | 仓库总说明 |
 | `docs/AUTOMATION.md` | 本文档，自动化配置与维护基线 |
 
