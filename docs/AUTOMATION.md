@@ -37,7 +37,7 @@ aihot API → GitHub Actions (ubuntu-latest) → gen_audio.py → audio/YYYY-MM-
 | 文件 | `.github/workflows/daily-podcast.yml` |
 | 状态 | `ACTIVE` |
 | 调度 | `cron: '30 0 * * *'`（UTC 00:30 = 北京时间 08:30） |
-| 手动入口 | `workflow_dispatch`（Actions 页面 Run workflow） |
+| 手动入口 | `workflow_dispatch`，可选 `target_date`（`YYYY-MM-DD`，留空=北京时间当天），用于指定日期验证或补跑 |
 | 运行器 | `ubuntu-latest` |
 | Python | `3.11`（actions/setup-python@v5） |
 | 依赖 | `edge-tts` |
@@ -60,7 +60,12 @@ aihot API → GitHub Actions (ubuntu-latest) → gen_audio.py → audio/YYYY-MM-
 
 ### 2.3 手动验证
 
-Actions 页 → 左侧选 `AI晨报双语播客每日更新` → 右侧 **Run workflow** → 手动跑一次。绿色对勾且日志出现 `ALREADY_DONE` 或 `PUSH_OK` 即通。
+Actions 页 → 左侧选 `AI晨报双语播客每日更新` → 右侧 **Run workflow**：
+
+- **幂等分支**：`target_date` 留空直接跑，因当天 manifest 已存在，日志出现 `ALREADY_DONE` 即通。
+- **完整生成+推送分支**：在 `target_date` 填一个尚无音频的日期（如 `2026-11-20`），跑完日志应出现 `PUSH_OK`，随后 main 上出现 `audio/2026-11-20/`，Pages 自动重新部署。
+
+绿色对勾 + 对应标记即为验证通过。
 
 ### 2.4 WorkBuddy 本地自动化（已停用，历史记录）
 

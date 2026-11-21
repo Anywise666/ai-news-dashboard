@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '30 0 * * *'   # UTC 00:30 = 北京时间 08:30
   workflow_dispatch:       # 保留手动触发入口，方便验证 / 补跑
+    inputs:
+      target_date:
+        description: '指定生成日期 YYYY-MM-DD（留空则取北京时间今天）'
+        required: false
+        type: string
 
 permissions:
   contents: write          # GITHUB_TOKEN 需写权限才能推回仓库
@@ -26,9 +31,17 @@ jobs:
       - name: 安装依赖
         run: pip install edge-tts
 
-      - name: 计算北京时间日期
+      - name: 计算目标日期
         id: dt
-        run: echo "today=$(TZ=Asia/Shanghai date +%F)" >> "$GITHUB_OUTPUT"
+        run: |
+          INPUT="${{ inputs.target_date }}"
+          if [ -n "$INPUT" ]; then
+            echo "today=$INPUT" >> "$GITHUB_OUTPUT"
+            echo "使用手动指定日期: $INPUT"
+          else
+            echo "today=$(TZ=Asia/Shanghai date +%F)" >> "$GITHUB_OUTPUT"
+            echo "使用北京时间当天"
+          fi
 
       - name: 幂等检查 - 当天是否已完成
         id: chk
