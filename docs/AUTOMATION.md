@@ -39,7 +39,7 @@ aihot API → GitHub Actions (ubuntu-latest) → gen_audio.py → audio/YYYY-MM-
 | 调度 | `cron: '30 0 * * *'`（UTC 00:30 = 北京时间 08:30） |
 | 手动入口 | `workflow_dispatch`（Actions 页面 Run workflow） |
 | 运行器 | `ubuntu-latest` |
-| Python | `3.11`（actions/setup-python@v5，pip 缓存开启） |
+| Python | `3.11`（actions/setup-python@v5） |
 | 依赖 | `edge-tts` |
 | 推送方式 | `GITHUB_TOKEN`（需仓库 Settings → Actions → General → Workflow permissions 设为 **Read and write**） |
 | 并发控制 | `concurrency.group = podcast-daily`，`cancel-in-progress: false` |
