@@ -8,6 +8,10 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 WORK=$(cd "$SCRIPT_DIR/.." && pwd)
 GEN="$SCRIPT_DIR/gen_audio.py"
 LIVE="$WORK/ai-daily-live"
+# 兼容两种布局：本地工作区 audio-pipeline/ + ai-daily-live/；仓库/服务器 tools/ + 根目录 index.html/audio/
+if [ ! -f "$LIVE/index.html" ] && [ -f "$WORK/index.html" ]; then
+  LIVE="$WORK"
+fi
 REPO="git@github.com:Anywise666/ai-news-dashboard.git"
 RAW_BASE="https://raw.githubusercontent.com/Anywise666/ai-news-dashboard/main"
 

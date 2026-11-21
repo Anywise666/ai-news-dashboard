@@ -1,0 +1,331 @@
+# AI 晨报播客自动化配置与维护文档
+
+> 最后更新：2026-11-21  
+> 仓库：<https://github.com/Anywise666/ai-news-dashboard>  
+> GitHub Pages：<https://anywise666.github.io/ai-news-dashboard/>
+
+本文档是仓库内关于“AI 晨报双语播客生成与推送”的配置基线。**以后任何脚本、定时规则、路径、依赖或仓库变更，都必须同步更新本文档并推送到 GitHub。**
+
+---
+
+## 1. 当前主方案概览
+
+当前主方案使用 **WorkBuddy 本地自动化**，不使用常开服务器。
+
+```text
+aihot API → 本地 gen_audio.py → 本地 audio/YYYY-MM-DD/ → GitHub main → GitHub Pages
+```
+
+核心原则：
+
+- 页面本身在浏览器端实时拉取 `https://aihot.news/api/v1`，所以新闻内容每天会更新。
+- 预生成的中英双语 mp3 和 `manifest.json` 依赖自动化任务。
+- GitHub `main` 分支上的 `audio/YYYY-MM-DD/manifest.json` 是“当天已完成”的唯一事实源。
+- 任务幂等：已完成就跳过；多台机器并发时通过 Git 临时分支加锁。
+- 服务器部署方案仅作为备用，**当前未执行**。
+
+---
+
+## 2. WorkBuddy 自动化配置
+
+### 2.1 准点任务
+
+| 字段 | 值 |
+|---|---|
+| 名称 | `AI晨报双语播客每日更新` |
+| ID | `a31fad70-e425-4dc2-b2ab-e8ee0ee1bd43` |
+| 状态 | `ACTIVE` |
+| 调度 | `FREQ=DAILY;BYHOUR=8;BYMINUTE=30` |
+| 工作目录 | `.`（工作区根目录） |
+| 工作区范围 | `workspace` |
+| 执行命令 | `bash "./audio-pipeline/daily_update.sh"` |
+
+作用：每天北京时间 08:30 准点生成并推送当天音频。
+
+### 2.2 上线补跑任务
+
+| 字段 | 值 |
+|---|---|
+| 名称 | `AI晨报双语播客上线补跑检查` |
+| ID | `af8c52b6-579e-411d-9e6e-e802312cdb6e` |
+| 状态 | `ACTIVE` |
+| 调度 | `FREQ=HOURLY;INTERVAL=1` |
+| 工作目录 | `.`（工作区根目录） |
+| 工作区范围 | `workspace` |
+| 执行命令 | `bash "./audio-pipeline/daily_update.sh"` |
+
+作用：登录同一 WorkBuddy 账号的机器上线后，在下一个整点检查当天任务是否已完成；未完成则补跑。
+
+> 说明：WorkBuddy 定时规则没有“开机瞬间触发”选项，因此用“每小时幂等检查”近似实现。它不会在开机瞬间立即执行，但会在下一个整点补跑。
+
+### 2.3 自动化提示词要点
+
+两个任务的提示词都要求：
+
+- 只运行一次 `daily_update.sh`，同一轮不要重复执行。
+- 将以下输出视为正常跳过，不报错：
+  - `ALREADY_DONE_REMOTE_RAW`
+  - `ALREADY_DONE_REMOTE_GIT`
+  - `ALREADY_DONE_REMOTE_AFTER_LOCK`
+  - `REMOTE_LOCK_SKIP`
+  - `NO_REPORT_SKIP`
+  - `NO_CHANGES_SKIP`
+  - `ANOTHER_MACHINE_DONE`
+- 只有 `PUSH_OK` 或 `PUSH_OK_AFTER_REBASE` 表示本次成功推送。
+- 只有 `PUSH_FAILED` 才报告错误原因。
+
+---
+
+## 3. 脚本与布局
+
+### 3.1 仓库内文件
+
+| 路径 | 说明 |
+|---|---|
+| `tools/daily_update.sh` | 跨机器幂等补跑脚本：生成音频 → 克隆仓库 → 拷贝页面与音频 → commit → push |
+| `tools/gen_audio.py` | 音频生成脚本，使用 `edge-tts` |
+| `index.html` | GitHub Pages 首页，日历档案 + 双语播客版 |
+| `audio/YYYY-MM-DD/` | 每日预生成的中英双语 mp3 + `manifest.json` |
+| `README.md` | 仓库总说明 |
+| `docs/AUTOMATION.md` | 本文档，自动化配置与维护基线 |
+
+### 3.2 本地工作区布局
+
+```text
+G:/Python Work/AI汇报/
+├── audio-pipeline/
+│   ├── daily_update.sh
+│   └── gen_audio.py
+├── ai-daily-live/
+│   ├── index.html
+│   └── audio/
+└── docs/
+    └── AUTOMATION.md
+```
+
+### 3.3 双布局兼容
+
+`tools/daily_update.sh` 和 `tools/gen_audio.py` 都兼容两种目录布局：
+
+| 场景 | 页面目录 | 音频目录 | 生成脚本目录 |
+|---|---|---|---|
+| 本地工作区 | `ai-daily-live/` | `ai-daily-live/audio/` | `audio-pipeline/` |
+| GitHub 仓库 / 服务器 | 仓库根目录 | 根目录 `audio/` | `tools/` |
+
+脚本通过“从自身位置推导工作目录”实现兼容，不依赖固定的 Windows 绝对路径。
+
+---
+
+## 4. 补跑脚本流程
+
+`tools/daily_update.sh` 的流程：
+
+1. 计算北京时间当天日期 `YYYY-MM-DD`。
+2. 通过公开 raw 地址快速检查：
+   - `https://raw.githubusercontent.com/Anywise666/ai-news-dashboard/main/audio/YYYY-MM-DD/manifest.json`
+   - 若已存在且含 `items`，直接输出 `ALREADY_DONE_REMOTE_RAW` 并退出。
+3. 临时克隆 GitHub 仓库，用 Git 状态再次检查 `origin/main:audio/YYYY-MM-DD/manifest.json`，避免 raw CDN 缓存误判。
+4. 获取跨机器锁：
+   - 锁分支：`automation-lock/YYYY-MM-DD`
+   - 若其他机器持锁，输出 `REMOTE_LOCK_SKIP` 并退出。
+   - 若锁超过 2 小时未释放，视为过期锁并尝试接管。
+   - 任务结束或失败时自动删除锁分支。
+5. 本地准备音频：
+   - 本地已有有效 `manifest.json` 时复用，避免重复 TTS。
+   - 否则调用 `gen_audio.py` 生成。
+6. 拷贝 `index.html` 和 `audio/` 到临时仓库，commit 并 push 到 `main`。
+7. 若首次 push 失败：
+   - 再次检查远端是否已有当天 manifest；
+   - 若已有，输出 `ANOTHER_MACHINE_DONE`；
+   - 否则尝试 rebase 后重试一次。
+
+---
+
+## 5. 多机器生效前提
+
+要让“所有登录本账号的机器上线后补跑”真正生效，每台机器需要满足：
+
+1. 登录同一个 WorkBuddy 账号。
+2. 打开同一个工作区 / 项目。
+3. 本地具备 Python 3，并安装 `edge-tts`。
+4. 本机 SSH key 已绑定 GitHub 账号 `Anywise666`，具备仓库写权限。
+5. 能访问 `aihot.news` API 和 GitHub。
+
+如果某台机器只上线 WorkBuddy，但没有打开该工作区或缺少依赖，自动化即使触发也无法完成补跑。
+
+---
+
+## 6. 备用方案：CentOS 8 服务器 cron（未执行）
+
+当本机不可长期在线时，可切换到常开服务器方案。以下为备用部署基线。
+
+### 6.1 依赖准备
+
+```bash
+sudo yum install -y python3 python3-pip git cronie
+sudo pip3 install edge-tts
+sudo systemctl enable --now crond
+sudo timedatectl set-timezone Asia/Shanghai
+```
+
+### 6.2 部署目录
+
+```bash
+sudo mkdir -p /opt/ai-news-dashboard/logs
+```
+
+将仓库内容部署到：
+
+```text
+/opt/ai-news-dashboard/
+├── index.html
+├── tools/
+│   ├── daily_update.sh
+│   └── gen_audio.py
+├── audio/
+├── README.md
+└── docs/
+    └── AUTOMATION.md
+```
+
+### 6.3 SSH 部署密钥
+
+在服务器生成 SSH key，并将公钥作为 GitHub 仓库 `Anywise666/ai-news-dashboard` 的 Deploy Key 添加，需勾选写权限。
+
+```bash
+ssh-keygen -t ed25519 -C "ai-news-dashboard-server"
+cat ~/.ssh/id_ed25519.pub
+```
+
+测试：
+
+```bash
+ssh -T git@github.com
+```
+
+### 6.4 cron 配置
+
+```bash
+crontab -e
+```
+
+加入：
+
+```cron
+30 8 * * * cd /opt/ai-news-dashboard && /usr/bin/bash ./tools/daily_update.sh >> /opt/ai-news-dashboard/logs/daily_update.log 2>&1
+```
+
+如果系统时区不是 `Asia/Shanghai`，可使用：
+
+```cron
+CRON_TZ=Asia/Shanghai
+30 8 * * * cd /opt/ai-news-dashboard && /usr/bin/bash ./tools/daily_update.sh >> /opt/ai-news-dashboard/logs/daily_update.log 2>&1
+```
+
+> 注意：部分 cron 实现不完全支持 `CRON_TZ`。更稳妥的方式是先把服务器系统时区设置为 `Asia/Shanghai`。
+
+### 6.5 systemd timer 替代方案
+
+服务文件 `/etc/systemd/system/ai-news-dashboard.service`：
+
+```ini
+[Unit]
+Description=AI News Dashboard Daily Podcast Update
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/ai-news-dashboard
+ExecStart=/usr/bin/bash /opt/ai-news-dashboard/tools/daily_update.sh
+```
+
+定时器 `/etc/systemd/system/ai-news-dashboard.timer`：
+
+```ini
+[Unit]
+Description=Run AI News Dashboard update daily at 08:30
+
+[Timer]
+OnCalendar=*-*-* 08:30:00
+Persistent=true
+Unit=ai-news-dashboard.service
+
+[Install]
+WantedBy=timers.target
+```
+
+启用：
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now ai-news-dashboard.timer
+sudo systemctl list-timers | grep ai-news-dashboard
+```
+
+其中 `Persistent=true` 支持机器关机错过时间后，开机时补跑一次。
+
+---
+
+## 7. 维护约定（必须执行）
+
+**从 2026-11-21 起，本文档是自动化配置的仓库内唯一基线。以后同步更新维护本文档。**
+
+发生以下任一变更时，必须更新本文档并提交到 GitHub：
+
+- 修改 `tools/daily_update.sh` 或 `audio-pipeline/daily_update.sh`
+- 修改 `tools/gen_audio.py` 或 `audio-pipeline/gen_audio.py`
+- 修改 WorkBuddy 自动化的名称、ID、调度规则、提示词、状态或工作目录
+- 修改 GitHub 仓库名、分支、Pages 地址或 SSH 部署方式
+- 修改音频保留天数、TTS 音色、API 域名或数据源
+- 启用 / 禁用服务器备用方案
+- 新增或取消跨机器锁机制
+
+### 7.1 标准维护流程
+
+```text
+1. 修改本地脚本或自动化配置
+2. 本地校验语法
+3. 同步脚本到 GitHub 仓库 tools/
+4. 更新 docs/AUTOMATION.md
+5. 必要时更新 README.md 的链接或简述
+6. commit + push 到 main
+7. 核验 GitHub 远端文件与最新提交
+8. 如自动化配置变化，重新核对 WorkBuddy 中的实际配置
+```
+
+### 7.2 校验命令
+
+本地脚本：
+
+```bash
+bash -n "./audio-pipeline/daily_update.sh"
+python -m py_compile "./audio-pipeline/gen_audio.py"
+```
+
+幂等补跑测试：
+
+```bash
+bash "./audio-pipeline/daily_update.sh"
+```
+
+若当天已完成，预期输出：
+
+```text
+ALREADY_DONE_REMOTE_RAW audio/YYYY-MM-DD/manifest.json
+```
+
+GitHub 端核验：
+
+```text
+https://github.com/Anywise666/ai-news-dashboard/commits/main
+https://github.com/Anywise666/ai-news-dashboard/blob/main/docs/AUTOMATION.md
+```
+
+---
+
+## 8. 已知限制
+
+- WorkBuddy 当前不支持“开机瞬间触发”，所以上线补跑依赖每小时检查。
+- 英文原题来自 `/api/v1/items`，仅覆盖近 7 天；历史日期音频会降级为中文。
+- GitHub Pages CDN 更新通常约 20 秒生效。
+- 多机器同时补跑时，只有拿到锁的机器会真正生成和推送；其他机器会跳过。
+- 服务器 cron / systemd 方案目前是备用，尚未启用。

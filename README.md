@@ -23,6 +23,7 @@
 | `audio/YYYY-MM-DD/` | 每日预生成的双语 mp3 + manifest.json(最近30天) |
 | `tools/gen_audio.py` | 音频生成脚本(edge-tts) |
 | `tools/daily_update.sh` | 跨机器幂等补跑脚本：生成音频并推送 main |
+| `docs/AUTOMATION.md` | 自动化配置与维护基线（含备用服务器方案） |
 | `ai-daily-2026-08-01.html` | 2026-08-01 单文件日报归档快照 |
 
 ## 功能
@@ -54,6 +55,9 @@
 - 内置发布:在「设置—数据管理—应用」中重新发布目录(链接会变)。
 
 ### 自动化补跑
+完整配置与维护基线见 [`docs/AUTOMATION.md`](docs/AUTOMATION.md)。
+
 - `tools/daily_update.sh` 以 `audio/YYYY-MM-DD/manifest.json` 是否存在作为当天已完成标记；已完成不会重复生成/推送。
 - 多机器并发时用临时分支 `automation-lock/YYYY-MM-DD` 作为跨机器锁，完成后自动删除；异常锁 2 小时后自动接管。
 - 脚本从自身位置推导工作目录，不依赖固定 Windows 路径。
+- 以后自动化配置发生任何变更，必须同步更新 `docs/AUTOMATION.md` 并推送。

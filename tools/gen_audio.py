@@ -17,8 +17,12 @@ import urllib.error
 from datetime import datetime, timedelta, timezone
 
 BASE = "https://aihot.news/api/v1"
-# 音频输出到发布目录下（GitHub Pages 从仓库 root 提供，故仓库内为 audio/）
-AUDIO_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ai-daily-live", "audio")
+# 兼容两种布局：本地工作区 ai-daily-live/audio；仓库/服务器根目录 audio/
+HERE = os.path.dirname(os.path.abspath(__file__))
+WORK = os.path.dirname(HERE)
+AUDIO_ROOT = os.path.join(WORK, "ai-daily-live", "audio")
+if not os.path.isdir(AUDIO_ROOT):
+    AUDIO_ROOT = os.path.join(WORK, "audio")
 VOICE_ZH = "zh-CN-XiaoxiaoNeural"   # 中文女声
 VOICE_EN = "en-US-JennyNeural"      # 英文女声
 KEEP_DAYS = 30
