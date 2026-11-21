@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI 晨报 · 日历档案</title>
-<meta name="wb-version" content="2026-11-20-4-podcast">
+<meta name="wb-version" content="2026-11-21-5-audio-podcast">
 <style>
   :root{
     --bg:#0b0f1a; --card:rgba(255,255,255,.045);
@@ -124,6 +124,19 @@
     padding:12px 16px;display:none;align-items:center;gap:12px;box-shadow:0 10px 34px rgba(0,0,0,.5)}
   .audio-bar.show{display:flex}
   .audio-bar .ab-ico{font-size:20px}
+  /* 微信/不支持TTS 时的跳出引导遮罩 */
+  .guide-mask{position:fixed;inset:0;z-index:200;background:rgba(8,11,20,.9);display:none;
+    align-items:center;justify-content:center;padding:24px}
+  .guide-mask.show{display:flex}
+  .guide-box{background:var(--card);border:1px solid rgba(56,189,248,.35);border-radius:18px;
+    padding:26px 24px;max-width:360px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  .guide-box .g-ico{font-size:42px;margin-bottom:8px}
+  .guide-box h3{font-size:18px;margin:0 0 10px;color:#dce6ff}
+  .guide-box p{font-size:14px;color:var(--mut);line-height:1.7;margin:0 0 16px}
+  .guide-box .g-step{display:inline-block;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.3);
+    border-radius:10px;padding:9px 14px;color:#7dd3fc;font-size:14px;font-weight:700;margin:4px 0}
+  .guide-box .g-close{display:block;width:100%;margin-top:18px;background:var(--accent);color:#0b0f1a;
+    border:none;border-radius:10px;padding:11px;font-size:15px;font-weight:700;cursor:pointer}
   .audio-bar .ab-info{flex:1;min-width:0}
   .audio-bar .ab-title{font-size:13px;font-weight:700;color:#dce6ff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .audio-bar .ab-phase{font-size:12px;color:var(--mut);margin-top:2px}
@@ -197,6 +210,18 @@
   </div>
   <button id="abStop">停止</button>
 </div>
+
+<div class="guide-mask" id="guideMask">
+  <div class="guide-box">
+    <div class="g-ico">🎧</div>
+    <h3>请在新浏览器打开收听</h3>
+    <p>微信内置浏览器暂不支持语音播放。请点击右上角</p>
+    <div class="g-step">··· → 在浏览器中打开</div>
+    <p style="margin-top:14px">打开后即可点击「听播客」收听中英文双语。</p>
+    <button class="g-close" id="guideClose">我知道了</button>
+  </div>
+</div>
+<audio id="podAudio" preload="none" style="display:none"></audio>
 
 <script>
 (function(){
@@ -282,43 +307,85 @@
   }
   function enTitleOf(url){ return EN_MAP[itemIdFromUrl(url)] || ''; }
 
-  // ===== 播客引擎（Web Speech API，中英双语串读）=====
-  var POD = { speaking:false, key:null, queue:[], idx:0, btn:null };
+  // ===== 播客引擎（优先预生成音频，回退 Web Speech TTS）=====
+  var POD = { speaking:false, key:null, btn:null, mode:null };
+  var AUDIO_MANIFEST = null;   // 当前日期 audio/<date>/manifest.json
+  var AUDIO_BASE = 'audio/';   // 相对发行目录
+  var AUDIO_DATE = null;
+  function showGuide(){ document.getElementById('guideMask').classList.add('show'); }
+  function hideGuide(){ document.getElementById('guideMask').classList.remove('show'); }
   function pickVoice(langPrefix){
     if(!('speechSynthesis' in window)) return null;
     var vs=window.speechSynthesis.getVoices()||[];
     var byLang=vs.filter(function(v){return (v.lang||'').toLowerCase().indexOf(langPrefix)===0;});
     return byLang[0]||null;
   }
+  async function loadAudioManifest(date){
+    AUDIO_MANIFEST=null; AUDIO_DATE=date;
+    try{
+      var r=await fetch(AUDIO_BASE+date+'/manifest.json',{cache:'no-store'});
+      if(r.ok){ AUDIO_MANIFEST=await r.json(); }
+    }catch(e){}
+  }
+  function audioTracksOf(itemKey){
+    if(!AUDIO_MANIFEST || !AUDIO_MANIFEST.items) return null;
+    var e=AUDIO_MANIFEST.items[itemKey];
+    if(!e) return null;
+    var tracks=[];
+    if(e.zh) tracks.push({url:AUDIO_BASE+AUDIO_DATE+'/'+e.zh, flag:'🇨🇳', label:'中文 · 标题与摘要'});
+    if(e.en) tracks.push({url:AUDIO_BASE+AUDIO_DATE+'/'+e.en, flag:'🇬🇧', label:'English · Original headline'});
+    return tracks.length?tracks:null;
+  }
+  function markPlaying(btn, on){ if(btn){ btn.classList.toggle('playing',on); btn.innerHTML=on?'<span class="ico">⏸</span> 播放中':'<span class="ico">▶</span> 听播客'; } }
   function stopPod(){
     if('speechSynthesis' in window) window.speechSynthesis.cancel();
-    POD.speaking=false; POD.queue=[]; POD.idx=0; POD.key=null; POD.btn=null;
+    var a=document.getElementById('podAudio'); try{a.pause();a.currentTime=0;}catch(e){}
+    a.onended=null; a.onerror=null;
+    POD.speaking=false; POD.key=null; POD.btn=null; POD.mode=null;
     document.getElementById('audioBar').classList.remove('show');
-    document.querySelectorAll('.listen.playing').forEach(function(b){b.classList.remove('playing');b.innerHTML='<span class="ico">▶</span> 听播客';});
+    document.querySelectorAll('.listen.playing').forEach(function(b){ markPlaying(b,false); });
   }
-  function speakQueue(key, btn, title, parts){
-    if(POD.speaking && POD.key===key){ stopPod(); return; }
-    if(!('speechSynthesis' in window)){ alert('当前浏览器不支持语音朗读，建议使用 Chrome / Edge / Safari。'); return; }
+  // 播放预生成音频队列（微信内可用）
+  function playAudioQueue(key, btn, title, tracks){
     stopPod();
-    POD.speaking=true; POD.key=key; POD.queue=parts; POD.idx=0; POD.btn=btn;
-    if(btn){ btn.classList.add('playing'); btn.innerHTML='<span class="ico">⏸</span> 播放中'; }
+    POD.speaking=true; POD.key=key; POD.btn=btn; POD.mode='audio';
+    markPlaying(btn,true);
     var bar=document.getElementById('audioBar');
     document.getElementById('abTitle').textContent=title;
     bar.classList.add('show');
-
+    var a=document.getElementById('podAudio');
+    var i=0;
     function next(){
-      if(POD.idx>=POD.queue.length){ stopPod(); return; }
-      var item=POD.queue[POD.idx];
+      if(i>=tracks.length){ stopPod(); return; }
+      var t=tracks[i];
+      document.getElementById('abIco').textContent=t.flag;
+      document.getElementById('abPhase').textContent='('+(i+1)+'/'+tracks.length+') '+t.label;
+      a.src=t.url; a.onended=function(){ i++; next(); };
+      a.onerror=function(){ i++; next(); };
+      var p=a.play();
+      if(p && p.catch) p.catch(function(){ /* 自动播放被拦截，用户已点击按钮一般允许 */ });
+    }
+    next();
+  }
+  // 回退浏览器 TTS
+  function speakQueue(key, btn, title, parts){
+    if(!('speechSynthesis' in window)){ showGuide(); return; }
+    stopPod();
+    POD.speaking=true; POD.key=key; POD.btn=btn; POD.mode='tts';
+    markPlaying(btn,true);
+    var bar=document.getElementById('audioBar');
+    document.getElementById('abTitle').textContent=title;
+    bar.classList.add('show');
+    var idx=0;
+    function next(){
+      if(idx>=parts.length){ stopPod(); return; }
+      var item=parts[idx];
       document.getElementById('abIco').textContent=item.lang.indexOf('zh')===0?'🇨🇳':'🇬🇧';
-      document.getElementById('abPhase').textContent='('+(POD.idx+1)+'/'+POD.queue.length+') '+(item.lang.indexOf('zh')===0?'中文':'English')+' · '+item.label;
+      document.getElementById('abPhase').textContent='('+(idx+1)+'/'+parts.length+') '+(item.lang.indexOf('zh')===0?'中文':'English')+' · '+item.label;
       var u=new SpeechSynthesisUtterance(item.text);
-      u.lang=item.lang;
-      var voice=pickVoice(item.lang.indexOf('zh')===0?'zh':'en');
-      if(voice) u.voice=voice;
-      u.rate=item.lang.indexOf('zh')===0?1.0:0.92;
-      u.pitch=1.0; u.volume=1.0;
-      u.onend=function(){ POD.idx++; next(); };
-      u.onerror=function(){ POD.idx++; next(); };
+      u.lang=item.lang; var voice=pickVoice(item.lang.indexOf('zh')===0?'zh':'en'); if(voice) u.voice=voice;
+      u.rate=item.lang.indexOf('zh')===0?1.0:0.92; u.pitch=1.0; u.volume=1.0;
+      u.onend=function(){ idx++; next(); }; u.onerror=function(){ idx++; next(); };
       window.speechSynthesis.speak(u);
     }
     next();
@@ -329,15 +396,19 @@
     if(enTitle) parts.push({text:enTitle,lang:'en-US',label:'Original headline'});
     return parts;
   }
-  function listenBtn(title, summary, enTitle){
+  function listenBtn(title, summary, enTitle, itemKey){
     var b=document.createElement('button');
     b.className='listen';
     b.innerHTML='<span class="ico">▶</span> 听播客';
-    b.title=enTitle?('双语：中文摘要 + 英文原题'):('中文朗读（该条暂无英文原题）');
+    var tracks=audioTracksOf(itemKey);
+    b.title=tracks?('播客音频：'+(tracks.length>1?'中英双语':'中文')):(enTitle?('双语朗读：中文摘要 + 英文原题'):('中文朗读'));
     b.onclick=function(e){
       e.preventDefault(); e.stopPropagation();
-      var key=title+'|'+summary;
-      speakQueue(key, b, title, makePodcast(title,summary,enTitle));
+      var key=itemKey||(title+'|'+summary);
+      if(POD.speaking && POD.key===key){ stopPod(); return; }
+      var tr=audioTracksOf(itemKey);
+      if(tr){ playAudioQueue(key, b, title, tr); }
+      else { speakQueue(key, b, title, makePodcast(title,summary,enTitle)); }
     };
     return b;
   }
@@ -374,7 +445,7 @@
       (sec.items||[]).forEach(function(it){
         var links=it.links||{};
         var aihotUrl=links.aihot||'';
-        buckets[key].push({title:it.title||"",source:(it.source&&it.source.name)||"未知来源",summary:it.summary||"",url:links.original||aihotUrl,aihotUrl:aihotUrl,en:enTitleOf(aihotUrl)});
+        buckets[key].push({title:it.title||"",source:(it.source&&it.source.name)||"未知来源",summary:it.summary||"",url:links.original||aihotUrl,itemId:itemIdFromUrl(aihotUrl),en:enTitleOf(aihotUrl)});
       });
     });
     var ordered=[];
@@ -485,7 +556,7 @@
       var leadPara=report.lead.leadParagraph||'';
       if(leadPara) lc.appendChild(el('p',null,cut(leadPara,120)));
       var leadEn=enTitleOf(lurl);
-      var leadListen=listenBtn(report.lead.title, leadPara, leadEn);
+      var leadListen=listenBtn(report.lead.title, leadPara, leadEn, 'lead');
       lc.appendChild(leadListen);
       main.appendChild(lc);
     }
@@ -505,7 +576,7 @@
         var actions=el('div','card-actions');
         var mr=el('a','more','阅读全文 →'); mr.href=it.url||'#'; mr.target='_blank'; mr.rel='noopener noreferrer';
         actions.appendChild(mr);
-        actions.appendChild(listenBtn(it.title, it.summary, it.en));
+        actions.appendChild(listenBtn(it.title, it.summary, it.en, it.itemId));
         card.appendChild(actions);
         grid.appendChild(card);
       });
@@ -540,6 +611,7 @@
     showMainLoading('正在加载 '+date+' 的日报…');
     try{
       var report=await getReport(date);
+      await loadAudioManifest(report.date||date);   // 音频清单就绪后再渲染按钮
       renderReport(report, date, (date===STATE.today));
     }catch(e){
       showError('加载失败：'+(e&&e.message?e.message:e));
@@ -550,6 +622,8 @@
   document.getElementById('nextM').onclick=function(){moveMonth(1);};
   document.getElementById('todayBtn').onclick=function(){ selectDate(STATE.today); };
   document.getElementById('abStop').onclick=function(){ stopPod(); };
+  document.getElementById('guideClose').onclick=function(){ hideGuide(); };
+  document.getElementById('guideMask').onclick=function(e){ if(e.target===this) hideGuide(); };
   window.addEventListener('beforeunload', function(){ if('speechSynthesis' in window) window.speechSynthesis.cancel(); });
 
   async function init(){

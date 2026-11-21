@@ -1,0 +1,66 @@
+{
+  "date": "2026-11-21",
+  "generatedAt": "2026-11-21T03:21:46.992830+00:00",
+  "items": {
+    "lead": {
+      "title": "Thinking Machines Lab 发布可跑在笔记本上的开源权重模型 Inkling 2 Mini",
+      "zh": "lead_zh.mp3"
+    },
+    "y7nk77dxae51qwi826gpmvbho": {
+      "title": "Thinking Machines Lab 发布可跑在笔记本上的开源权重模型 Inkling 2 Mini",
+      "zh": "y7nk77dxae51qwi826gpmvbho_zh.mp3",
+      "en": "y7nk77dxae51qwi826gpmvbho_en.mp3"
+    },
+    "jl6m0eymz9z0kleh54c3guowx": {
+      "title": "腾讯混元开放 Hy4 权重",
+      "zh": "jl6m0eymz9z0kleh54c3guowx_zh.mp3",
+      "en": "jl6m0eymz9z0kleh54c3guowx_en.mp3"
+    },
+    "wlcnqahdyb61gpeoddwj45yyy": {
+      "title": "Google 发布 Gemini 4 Hydrogen，已上线 Gemini 应用和 Search",
+      "zh": "wlcnqahdyb61gpeoddwj45yyy_zh.mp3"
+    },
+    "ekf0so0xitc52thkrxx3mwax1": {
+      "title": "ChatGPT 推出 Space：统一管理页面、幻灯片、图片与文件",
+      "zh": "ekf0so0xitc52thkrxx3mwax1_zh.mp3",
+      "en": "ekf0so0xitc52thkrxx3mwax1_en.mp3"
+    },
+    "wibzzhd168cafn7o3gl8336di": {
+      "title": "browser-use 1.0 发布：用一个 Python REPL 工具替代 24 个浏览器动作",
+      "zh": "wibzzhd168cafn7o3gl8336di_zh.mp3",
+      "en": "wibzzhd168cafn7o3gl8336di_en.mp3"
+    },
+    "t68rgyv46hdbp52212ozxleh3": {
+      "title": "Google 回顾 Duplex 十年演进：如何在 Gemini Tasks 中替用户打电话给商家",
+      "zh": "t68rgyv46hdbp52212ozxleh3_zh.mp3",
+      "en": "t68rgyv46hdbp52212ozxleh3_en.mp3"
+    },
+    "vu6fw8wmrs3xcln4u9gwzf1f4": {
+      "title": "Anthropic 数学家 Levent Alpöge 宣布与 Claude 合作证明黎曼猜想，放出 1737 万行 Lean 代码",
+      "zh": "vu6fw8wmrs3xcln4u9gwzf1f4_zh.mp3",
+      "en": "vu6fw8wmrs3xcln4u9gwzf1f4_en.mp3"
+    },
+    "sn8qb9u8fqka3mpnmy0r1nz4b": {
+      "title": "METR 发布 2026 年 11 月能力测量更新：AI R&D 相关能力每约 3.6 个月翻倍且更难测量",
+      "zh": "sn8qb9u8fqka3mpnmy0r1nz4b_zh.mp3"
+    },
+    "sakj36g0tvzaeoianryyn6o6g": {
+      "title": "MiniMax 内部模型 MIM 实现多项密码分析实用攻击并开源验证轨迹",
+      "zh": "sakj36g0tvzaeoianryyn6o6g_zh.mp3"
+    },
+    "wnw22hxqlwsd58lzsm44psc6g": {
+      "title": "Runway 详解如何构建智能体驱动的软件工厂",
+      "zh": "wnw22hxqlwsd58lzsm44psc6g_zh.mp3",
+      "en": "wnw22hxqlwsd58lzsm44psc6g_en.mp3"
+    },
+    "amx0tnq9rthd6ssx81np25ldc": {
+      "title": "DeepSeek Harness 发布100天，作者分享13个实用插件玩法",
+      "zh": "amx0tnq9rthd6ssx81np25ldc_zh.mp3"
+    },
+    "i94tul4bae051uizh2kkpn2r4": {
+      "title": "OpenHands 详解用 Agent 自动修复自家镜像 CVE 的软件工厂",
+      "zh": "i94tul4bae051uizh2kkpn2r4_zh.mp3",
+      "en": "i94tul4bae051uizh2kkpn2r4_en.mp3"
+    }
+  }
+}
