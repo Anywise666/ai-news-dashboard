@@ -23,7 +23,8 @@ aihot API → GitHub Actions (ubuntu-latest) → gen_audio.py → audio/YYYY-MM-
 - GitHub `main` 分支上的 `audio/YYYY-MM-DD/manifest.json` 是"当天已完成"的唯一事实源。
 - 任务幂等：当天 manifest 已存在且有效就跳过生成与推送。
 - 公共仓库的 GitHub Actions 永久免费、不限分钟数，无需信用卡，也不受本机在线状态影响。
-- 服务器部署方案（第 6 节）与 WorkBuddy 本地自动化（第 2.4 节）均作为历史备用，**当前未启用**。
+- 服务器部署方案（第 6 节）为历史备用，**当前未启用**。
+- WorkBuddy 本地自动化作为**最后一道防线**（第 2.4 节）：每天 20:00 检查线上当天音频，缺失才补跑，正常情况不产生任何操作。
 
 ---
 
@@ -76,16 +77,30 @@ Actions 页 → 左侧选 `AI晨报双语播客每日更新` → 右侧 **Run wo
 
 绿色对勾 + 对应标记即为验证通过。
 
-### 2.4 WorkBuddy 本地自动化（已停用，历史记录）
+### 2.4 WorkBuddy 本地自动化（最后一道防线）
 
-迁移前使用两个 WorkBuddy 本地任务，现已在 GitHub Actions 接管后停用：
+迁移前使用两个 WorkBuddy 本地任务，在 GitHub Actions 接管后一度停用：
 
 | 名称 | 原 ID | 原调度 | 状态 |
 |---|---|---|---|
-| `AI晨报双语播客每日更新` | `a31fad70-e425-4dc2-b2ab-e8ee0ee1bd43` | `FREQ=DAILY;BYHOUR=8;BYMINUTE=30` | 已停用 |
-| `AI晨报双语播客上线补跑检查` | `af8c52b6-579e-411d-9e6e-e802312cdb6e` | `FREQ=HOURLY;INTERVAL=1` | 已停用 |
+| `AI晨报双语播客每日更新` | `a31fad70-e425-4dc2-b2ab-e8ee0ee1bd43` | `FREQ=DAILY;BYHOUR=8;BYMINUTE=30` | 已停用（历史） |
+| `AI晨报双语播客上线补跑检查` | `af8c52b6-579e-411d-9e6e-e802312cdb6e` | `FREQ=HOURLY;INTERVAL=1` | 已停用（历史） |
 
-二者执行命令均为 `bash "./audio-pipeline/daily_update.sh"`。原提示词约定：只运行一次脚本，`ALREADY_DONE_*` / `REMOTE_LOCK_SKIP` / `NO_REPORT_SKIP` / `NO_CHANGES_SKIP` / `ANOTHER_MACHINE_DONE` 视为正常跳过，仅 `PUSH_OK` / `PUSH_OK_AFTER_REBASE` 表示成功，`PUSH_FAILED` 报错。
+二者原执行命令均为 `bash "./audio-pipeline/daily_update.sh"`。原提示词约定：只运行一次脚本，`ALREADY_DONE_*` / `REMOTE_LOCK_SKIP` / `NO_REPORT_SKIP` / `NO_CHANGES_SKIP` / `ANOTHER_MACHINE_DONE` 视为正常跳过，仅 `PUSH_OK` / `PUSH_OK_AFTER_REBASE` 表示成功，`PUSH_FAILED` 报错。
+
+**2026-11-22 新增兜底任务（当前启用）**：
+
+| 名称 | ID | 调度 | 执行命令 | 状态 |
+|---|---|---|---|---|
+| `AI晨报播客兜底检查` | `ee5e56ac-3f26-4798-a237-2ded5165a435` | `FREQ=DAILY;BYHOUR=20;BYMINUTE=0`（每天北京时间 20:00） | `bash "D:/Python Work/AI汇报/ai-news-dashboard/tools/ensure_today.sh"` | ACTIVE |
+
+定位：GitHub Actions 三个错峰 cron + push 兜底之后的**最后一道防线**，专门覆盖「当天零提交 + 三个 cron 全部被 GitHub 丢弃」的边缘场景。脚本 `tools/ensure_today.sh` 以线上 `audio/<今天>/brief_zh.mp3` 的 HTTP 状态为唯一事实源：
+
+- 线上 200 → 输出 `ALREADY_OK` 直接退出（绝大多数情况，不做任何写操作，不干扰云端任务）。
+- 线上 404 → 本地 `gen_audio.py` + `gen_feed.py` 生成，commit 后带 6 次重试 push 到 main（应对本机代理对 github.com 的间歇性握手失败），再轮询复核上线，成功输出 `PUSH_OK`。
+- 失败标记：`GEN_FAILED` / `FEED_FAILED` / `PUSH_FAILED`。
+
+> 依赖提醒：该任务需要本机在 20:00 在线且已装 `edge-tts`。它只在云端两道防线都失效时才真正干活，是「最后保险」而非主链路；即便某天本机不在线，也只是回到无兜底状态，不影响云端正常工作。
 
 ---
 
