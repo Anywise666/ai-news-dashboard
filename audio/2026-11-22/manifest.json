@@ -1,0 +1,40 @@
+{
+  "date": "2026-11-22",
+  "generatedAt": "2026-11-22T02:51:39.495692+00:00",
+  "items": {
+    "lead": {
+      "title": "Anthropic 数学家称与 Claude 完成黎曼猜想证明，斯坦福数小时后发布纯人类竞争草稿",
+      "zh": "lead_zh.mp3"
+    },
+    "rlj39tzyujneo0u35iyrfb4uc": {
+      "title": "Qwen4 Max 上线 Together AI，单次调用修复 Tornado 整仓 bug",
+      "zh": "rlj39tzyujneo0u35iyrfb4uc_zh.mp3",
+      "en": "rlj39tzyujneo0u35iyrfb4uc_en.mp3"
+    },
+    "xqe6lbb5zsjp9xbsc1o912cs0": {
+      "title": "Together AI 通报 2026 年 6-7 月 serverless 推理服务提示词泄露事件",
+      "zh": "xqe6lbb5zsjp9xbsc1o912cs0_zh.mp3",
+      "en": "xqe6lbb5zsjp9xbsc1o912cs0_en.mp3"
+    },
+    "tje8i8y21ttk7jjmqet5bpxuq": {
+      "title": "Anthropic 数学家称与 Claude 完成黎曼猜想证明，斯坦福数小时后发布纯人类竞争草稿",
+      "zh": "tje8i8y21ttk7jjmqet5bpxuq_zh.mp3",
+      "en": "tje8i8y21ttk7jjmqet5bpxuq_en.mp3"
+    },
+    "agm7klro03kcu9weuix1bt4su": {
+      "title": "研究者向 AI 供应链埋入 200 万个金丝雀，揭露敏感数据泄露",
+      "zh": "agm7klro03kcu9weuix1bt4su_zh.mp3",
+      "en": "agm7klro03kcu9weuix1bt4su_en.mp3"
+    },
+    "d32df9vzpliz9m348fug74inq": {
+      "title": "Columbia 与 MIT 论文展示 Claude 发现的算法突破 3SUM 与 APSP 长期速度上限",
+      "zh": "d32df9vzpliz9m348fug74inq_zh.mp3",
+      "en": "d32df9vzpliz9m348fug74inq_en.mp3"
+    },
+    "p52mxe56big96tb6cx9qr1rij": {
+      "title": "OpenAI 发布 MedChemBench：评估 AI 模型解读分子结构与实验数据的能力",
+      "zh": "p52mxe56big96tb6cx9qr1rij_zh.mp3"
+    }
+  },
+  "brief": "brief_zh.mp3"
+}

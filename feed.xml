@@ -12,6 +12,18 @@
     <atom:link href="https://anywise666.github.io/ai-news-dashboard/feed.xml" rel="self" type="application/rss+xml" />
     <ttl>60</ttl>
     <item>
+      <title><![CDATA[AI 晨报速览 · 11月22日]]></title>
+      <link>https://anywise666.github.io/ai-news-dashboard/index.html</link>
+      <description><![CDATA[90 秒速览当天 AI 要闻。 今日头条：Anthropic 数学家称与 Claude 完成黎曼猜想证明，斯坦福数小时后发布纯人类竞争草稿 完整日报：https://anywise666.github.io/ai-news-dashboard/index.html]]></description>
+      <guid isPermaLink="false">ai-news-daily-2026-11-22</guid>
+      <pubDate>Sun, 22 Nov 2026 08:30:00 +0800</pubDate>
+      <enclosure url="https://anywise666.github.io/ai-news-dashboard/audio/2026-11-22/brief_zh.mp3" length="358128" type="audio/mpeg" />
+      <itunes:duration>90</itunes:duration>
+      <itunes:title><![CDATA[AI 晨报速览 · 11月22日]]></itunes:title>
+      <itunes:summary><![CDATA[90 秒速览当天 AI 要闻。 今日头条：Anthropic 数学家称与 Claude 完成黎曼猜想证明，斯坦福数小时后发布纯人类竞争草稿 完整日报：https://anywise666.github.io/ai-news-dashboard/index.html]]></itunes:summary>
+      <itunes:episodeType>full</itunes:episodeType>
+    </item>
+    <item>
       <title><![CDATA[AI 晨报速览 · 11月21日]]></title>
       <link>https://anywise666.github.io/ai-news-dashboard/index.html</link>
       <description><![CDATA[90 秒速览当天 AI 要闻。 今日头条：Thinking Machines Lab 发布可跑在笔记本上的开源权重模型 Inkling 2 Mini 完整日报：https://anywise666.github.io/ai-news-dashboard/index.html]]></description>
