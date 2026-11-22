@@ -1,6 +1,6 @@
 # AI 晨报播客自动化配置与维护文档
 
-> 最后更新：2026-11-21  
+> 最后更新：2026-11-22  
 > 仓库：<https://github.com/Anywise666/ai-news-dashboard>  
 > GitHub Pages：<https://anywise666.github.io/ai-news-dashboard/>
 
@@ -36,7 +36,8 @@ aihot API → GitHub Actions (ubuntu-latest) → gen_audio.py → audio/YYYY-MM-
 | 名称 | `AI晨报双语播客每日更新` |
 | 文件 | `.github/workflows/daily-podcast.yml` |
 | 状态 | `ACTIVE` |
-| 调度 | `cron: '30 0 * * *'`（UTC 00:30 = 北京时间 08:30） |
+| 调度 | 三个错峰 cron：`'17 0 * * *'`（北京 08:17 主）、`'23 5 * * *'`（北京 13:23 午后兜底）、`'41 11 * * *'`（北京 19:41 晚间兜底） |
+| 兜底触发 | `push` 到 `main`（`paths-ignore: audio/**`、`feed.xml`），任何非音频提交都会触发一次幂等检查，防止 schedule 被丢弃时整天不生成 |
 | 手动入口 | `workflow_dispatch`，可选 `target_date`（`YYYY-MM-DD`，留空=北京时间当天），用于指定日期验证或补跑 |
 | 运行器 | `ubuntu-latest` |
 | Python | `3.11`（actions/setup-python@v5） |
@@ -54,7 +55,13 @@ aihot API → GitHub Actions (ubuntu-latest) → gen_audio.py → audio/YYYY-MM-
 - `NO_CHANGES_SKIP`：生成后无文件变化，跳过提交。
 - `PUSH_OK`：本次成功推送。
 
-> 注意：GitHub Actions 的 `schedule` 只接受 UTC，故北京时间 08:30 写作 UTC 00:30。高峰期定时可能延迟数分钟；公共仓库若连续 60 天无提交，定时任务会被自动停用（本仓库几乎每天有音频推送，不会触发）。用 `GITHUB_TOKEN` 推送的 commit 不会再次触发本 workflow，无递归风险。
+> 注意：GitHub Actions 的 `schedule` 只接受 UTC。2026-11-22 故障复盘：原单点 cron `'30 0 * * *'`（UTC 整点半高峰）自建仓以来 **0 次触发**，GitHub 页面显示 "0 workflow runs"，而手动 `workflow_dispatch` 正常——即云端 cron 被丢弃，非脚本问题。
+>
+> 修复策略（2026-11-22）：
+> 1. **多时点错峰**：三个 cron 分散在全天，避开 UTC 整点/半点拥堵窗口，任一触发即可，幂等检查保证当天只生成一次。
+> 2. **push 兜底**：任何 push 到 `main`（排除 `audio/**`、`feed.xml` 自身）都会触发一次幂等运行。即便 schedule 全部失效，只要有日常代码/文档提交就会补上当天生成；`GITHUB_TOKEN` 推送的音频/feed 提交被 `paths-ignore` 排除，无递归风险。
+>
+> 其他约束：公共仓库若连续 60 天无提交，GitHub 会自动停用定时任务；本修复的 push 兜底也规避了这一点。用 `GITHUB_TOKEN` 推送的 commit 不会再次触发本 workflow。
 
 ### 2.2 权限配置（一次性）
 
@@ -335,7 +342,7 @@ https://github.com/Anywise666/ai-news-dashboard/blob/main/docs/AUTOMATION.md
 
 ## 8. 已知限制
 
-- GitHub Actions `schedule` 只认 UTC，且有数分钟延迟；非精确准点。
+- GitHub Actions `schedule` 只认 UTC，且有数分钟延迟，高峰时段可能被直接丢弃（见 2.1 故障复盘）；已用多时点 + push 兜底缓解，但无法保证 100% 准点。
 - 英文原题来自 `/api/v1/items`，仅覆盖近 7 天；历史日期音频会降级为中文。
 - GitHub Pages CDN 更新通常约 20 秒生效。
 - 公共仓库连续 60 天无提交会被自动暂停定时任务（本仓库日常推送不会触发）。
