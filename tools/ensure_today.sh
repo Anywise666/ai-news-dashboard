@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # AI 晨报播客「最后一道防线」：每天检查线上当天音频是否存在，缺失则本地补跑并推送。
-# 用途：当 GitHub Actions 的 schedule 被丢弃、且当天无人 push（push 兜底也未触发）时，
-#       由 WorkBuddy 定时任务（每天北京时间 20:00）调用本脚本补齐。
+# 用途：当 GitHub Actions 的早间 cron 被丢弃、且当天无人 push（push 兜底也未触发）时，
+#       由 WorkBuddy 定时任务（每天北京时间 08:40）调用本脚本补齐，守住「早 8:30 上线」初衷。
 # 原则：线上 audio/YYYY-MM-DD/brief_zh.mp3 的 HTTP 状态是「当天是否完成」的唯一事实源。
 set -uo pipefail
 

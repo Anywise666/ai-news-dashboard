@@ -24,7 +24,7 @@ aihot API → GitHub Actions (ubuntu-latest) → gen_audio.py → audio/YYYY-MM-
 - 任务幂等：当天 manifest 已存在且有效就跳过生成与推送。
 - 公共仓库的 GitHub Actions 永久免费、不限分钟数，无需信用卡，也不受本机在线状态影响。
 - 服务器部署方案（第 6 节）为历史备用，**当前未启用**。
-- WorkBuddy 本地自动化作为**最后一道防线**（第 2.4 节）：每天 20:00 检查线上当天音频，缺失才补跑，正常情况不产生任何操作。
+- WorkBuddy 本地自动化作为**最后一道防线**（第 2.4 节）：每天 08:40 检查线上当天音频，缺失才补跑，正常情况不产生任何操作。时间与云端 cron 同处早 8 点窗口，守住「早 8:30 上线」初衷。
 
 ---
 
@@ -37,7 +37,7 @@ aihot API → GitHub Actions (ubuntu-latest) → gen_audio.py → audio/YYYY-MM-
 | 名称 | `AI晨报双语播客每日更新` |
 | 文件 | `.github/workflows/daily-podcast.yml` |
 | 状态 | `ACTIVE` |
-| 调度 | 三个错峰 cron：`'17 0 * * *'`（北京 08:17 主）、`'23 5 * * *'`（北京 13:23 午后兜底）、`'41 11 * * *'`（北京 19:41 晚间兜底） |
+| 调度 | 三个集中于早 8 点的 cron：`'08 0 * * *'`（北京 08:08）、`'16 0 * * *'`（北京 08:16）、`'24 0 * * *'`（北京 08:24），任一触发即可；刻意不设午后/晚间时点，以守住「早 8:30 上线」初衷 |
 | 兜底触发 | `push` 到 `main`（`paths-ignore: audio/**`、`feed.xml`），任何非音频提交都会触发一次幂等检查，防止 schedule 被丢弃时整天不生成 |
 | 手动入口 | `workflow_dispatch`，可选 `target_date`（`YYYY-MM-DD`，留空=北京时间当天），用于指定日期验证或补跑 |
 | 运行器 | `ubuntu-latest` |
@@ -59,7 +59,7 @@ aihot API → GitHub Actions (ubuntu-latest) → gen_audio.py → audio/YYYY-MM-
 > 注意：GitHub Actions 的 `schedule` 只接受 UTC。2026-11-22 故障复盘：原单点 cron `'30 0 * * *'`（UTC 整点半高峰）自建仓以来 **0 次触发**，GitHub 页面显示 "0 workflow runs"，而手动 `workflow_dispatch` 正常——即云端 cron 被丢弃，非脚本问题。
 >
 > 修复策略（2026-11-22）：
-> 1. **多时点错峰**：三个 cron 分散在全天，避开 UTC 整点/半点拥堵窗口，任一触发即可，幂等检查保证当天只生成一次。
+> 1. **多时点集中于早 8 点**：三个 cron 全部落在 08:08 / 08:16 / 08:24（避开 UTC 整点/半点拥堵窗口），任一触发即可，幂等检查保证当天只生成一次。**刻意不设午后/晚间时点**——产品初衷是「早 8:30 能听当天晨报」，把触发点分散全天虽能防丢弃，却会让上线拖到下午/晚上，本末倒置。
 > 2. **push 兜底**：任何 push 到 `main`（排除 `audio/**`、`feed.xml` 自身）都会触发一次幂等运行。即便 schedule 全部失效，只要有日常代码/文档提交就会补上当天生成；`GITHUB_TOKEN` 推送的音频/feed 提交被 `paths-ignore` 排除，无递归风险。
 >
 > 其他约束：公共仓库若连续 60 天无提交，GitHub 会自动停用定时任务；本修复的 push 兜底也规避了这一点。用 `GITHUB_TOKEN` 推送的 commit 不会再次触发本 workflow。
@@ -92,15 +92,15 @@ Actions 页 → 左侧选 `AI晨报双语播客每日更新` → 右侧 **Run wo
 
 | 名称 | ID | 调度 | 执行命令 | 状态 |
 |---|---|---|---|---|
-| `AI晨报播客兜底检查` | `ee5e56ac-3f26-4798-a237-2ded5165a435` | `FREQ=DAILY;BYHOUR=20;BYMINUTE=0`（每天北京时间 20:00） | `bash "D:/Python Work/AI汇报/ai-news-dashboard/tools/ensure_today.sh"` | ACTIVE |
+| `AI晨报播客兜底检查` | `ee5e56ac-3f26-4798-a237-2ded5165a435` | `FREQ=DAILY;BYHOUR=8;BYMINUTE=40`（每天北京时间 08:40） | `bash "D:/Python Work/AI汇报/ai-news-dashboard/tools/ensure_today.sh"` | ACTIVE |
 
-定位：GitHub Actions 三个错峰 cron + push 兜底之后的**最后一道防线**，专门覆盖「当天零提交 + 三个 cron 全部被 GitHub 丢弃」的边缘场景。脚本 `tools/ensure_today.sh` 以线上 `audio/<今天>/brief_zh.mp3` 的 HTTP 状态为唯一事实源：
+定位：GitHub Actions 三个早间 cron + push 兜底之后的**最后一道防线**，专门覆盖「当天零提交 + 三个 cron 全部被 GitHub 丢弃」的边缘场景。调度时间从原先的 20:00 提前到 08:40，与云端 cron 同处早 8 点窗口，避免把上线拖到晚上，守住「早 8:30 上线」初衷。08:24 最晚 cron 若延迟数分钟，08:40 检查仍留有生成 + Pages 部署的缓冲（正常约 2 分钟）。脚本 `tools/ensure_today.sh` 以线上 `audio/<今天>/brief_zh.mp3` 的 HTTP 状态为唯一事实源：
 
 - 线上 200 → 输出 `ALREADY_OK` 直接退出（绝大多数情况，不做任何写操作，不干扰云端任务）。
 - 线上 404 → 本地 `gen_audio.py` + `gen_feed.py` 生成，commit 后带 6 次重试 push 到 main（应对本机代理对 github.com 的间歇性握手失败），再轮询复核上线，成功输出 `PUSH_OK`。
 - 失败标记：`GEN_FAILED` / `FEED_FAILED` / `PUSH_FAILED`。
 
-> 依赖提醒：该任务需要本机在 20:00 在线且已装 `edge-tts`。它只在云端两道防线都失效时才真正干活，是「最后保险」而非主链路；即便某天本机不在线，也只是回到无兜底状态，不影响云端正常工作。
+> 依赖提醒：该任务需要本机在 08:40 在线且已装 `edge-tts`。它只在云端两道防线都失效时才真正干活，是「最后保险」而非主链路；即便某天本机不在线，也只是回到无兜底状态，不影响云端正常工作。代价是本机需早上在线——但这是把上线时间守在早晨的必要取舍，换来的是绝大多数日子 08:08–08:24 云端就已上线，根本用不到它。
 
 ---
 
@@ -114,7 +114,7 @@ Actions 页 → 左侧选 `AI晨报双语播客每日更新` → 右侧 **Run wo
 | `tools/daily_update.sh` | 跨机器幂等补跑脚本（原 WorkBuddy 任务使用，现备用）：生成音频 → 克隆仓库 → 拷贝页面与音频 → commit → push |
 | `tools/gen_audio.py` | 音频生成脚本，使用 `edge-tts`（Actions 直接复用）；同时生成 90 秒速览 `brief_zh.mp3` |
 | `tools/gen_feed.py` | 播客 RSS 生成脚本（纯标准库），扫描 audio/ 生成 feed.xml，Actions 每次运行后重建 |
-| `tools/ensure_today.sh` | WorkBuddy 每天 20:00 兜底脚本：检查线上当天音频，缺失才本地补跑并推送（见 2.4） |
+| `tools/ensure_today.sh` | WorkBuddy 每天 08:40 兜底脚本：检查线上当天音频，缺失才本地补跑并推送（见 2.4） |
 | `index.html` | GitHub Pages 首页，日历档案 + 双语播客 + 90 秒速览 + 播客订阅 + 阅读工具 |
 | `audio/YYYY-MM-DD/` | 每日预生成的中英双语 mp3 + `brief_zh.mp3`(速览) + `manifest.json`(含 `brief` 字段) |
 | `feed.xml` | 播客订阅源（RSS 2.0 + iTunes），每期 enclosure 指向 brief_zh.mp3，保留最近 60 期 |
@@ -359,9 +359,9 @@ https://github.com/Anywise666/ai-news-dashboard/blob/main/docs/AUTOMATION.md
 
 ## 8. 已知限制
 
-- GitHub Actions `schedule` 只认 UTC，且有数分钟延迟，高峰时段可能被直接丢弃（见 2.1 故障复盘）；已用多时点 + push 兜底缓解，但无法保证 100% 准点。
+- GitHub Actions `schedule` 只认 UTC，且有数分钟延迟，高峰时段可能被直接丢弃（见 2.1 故障复盘）；已用三个早间时点（08:08/08:16/08:24）+ push 兜底 + WorkBuddy 08:40 最后防线缓解，但无法保证 100% 准点。所有防线均集中在早 8 点窗口，以确保「早 8:30 上线」的产品初衷。
 - 英文原题来自 `/api/v1/items`，仅覆盖近 7 天；历史日期音频会降级为中文。
 - GitHub Pages CDN 更新通常约 20 秒生效。
 - 公共仓库连续 60 天无提交会被自动暂停定时任务（本仓库日常推送不会触发）。
 - 原多机器锁机制随 WorkBuddy 任务停用而不再参与主链路；`daily_update.sh` 保留备用时仍可用。
-- 服务器 cron / systemd 方案与 WorkBuddy 本地任务均为历史备用，当前未启用。
+- 服务器 cron / systemd 方案为历史备用，当前未启用；WorkBuddy 兜底任务（08:40）当前启用，见 2.4。
