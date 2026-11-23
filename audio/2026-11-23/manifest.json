@@ -1,0 +1,26 @@
+{
+  "date": "2026-11-23",
+  "generatedAt": "2026-11-23T00:52:45.382849+00:00",
+  "items": {
+    "lead": {
+      "title": "OpenAI 提议以困惑度作为行业共享指标并公开内部预训练测量数据",
+      "zh": "lead_zh.mp3"
+    },
+    "dr26culfdd1cb21w56i8iruts": {
+      "title": "MiniCPM 8B 成为老挝国家模型，端侧小模型加速落地多国",
+      "zh": "dr26culfdd1cb21w56i8iruts_zh.mp3",
+      "en": "dr26culfdd1cb21w56i8iruts_en.mp3"
+    },
+    "r7kb35fpdwc1m2iqsmd310tdj": {
+      "title": "OpenAI 提议以困惑度作为行业共享指标并公开内部预训练测量数据",
+      "zh": "r7kb35fpdwc1m2iqsmd310tdj_zh.mp3",
+      "en": "r7kb35fpdwc1m2iqsmd310tdj_en.mp3"
+    },
+    "g3vdho0vzm8rzriiz5grruy3m": {
+      "title": "用户实测用 MiniCPM5-2B 在 Mac 上本地跑通体检报告分析",
+      "zh": "g3vdho0vzm8rzriiz5grruy3m_zh.mp3",
+      "en": "g3vdho0vzm8rzriiz5grruy3m_en.mp3"
+    }
+  },
+  "brief": "brief_zh.mp3"
+}
