@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# AI 晨报播客「最后一道防线」：每天检查线上当天音频是否存在，缺失则本地补跑并推送。
-# 用途：当 GitHub Actions 的早间 cron 被丢弃、且当天无人 push（push 兜底也未触发）时，
-#       由 WorkBuddy 定时任务（每天北京时间 08:40）调用本脚本补齐，守住「早 8:30 上线」初衷。
+# AI 晨报播客本机兜底主力：每天检查线上当天音频是否存在，缺失则本地补跑并推送。
+# 背景（2026-11-24）：GitHub Actions 云端 schedule 长期不可靠（延迟数小时 / 整日零触发），
+#   本机兜底由「最后防线」提前为实际主力，WorkBuddy 定时任务每天北京时间 08:05 调用。
+#   数据源 aihot 当日日报约 08:00 就绪，08:05 补跑可守住「早 8:30 上线」初衷。
 # 原则：线上 audio/YYYY-MM-DD/brief_zh.mp3 的 HTTP 状态是「当天是否完成」的唯一事实源。
 set -uo pipefail
 
@@ -28,7 +29,33 @@ echo "当天音频缺失，开始本地补跑 ..."
 cd "$WORK" || { echo "PUSH_FAILED 无法进入仓库目录"; exit 1; }
 
 # 1) 生成本地音频（edge-tts）
-python "$SCRIPT_DIR/gen_audio.py" "$TODAY" || { echo "GEN_FAILED"; exit 1; }
+# 数据源当日日报约 08:00 就绪，偶发延迟（几分钟）时首跑会拿到空数据而只生成空目录。
+# 以 manifest.json 里是否真的有条目为成功判据，失败则等待重试，避免一次扑空就整天错过。
+gen_ok=0
+for attempt in 1 2 3 4 5; do
+  python "$SCRIPT_DIR/gen_audio.py" "$TODAY"
+  if python - "$TODAY" "$WORK" <<'PY' 2>/dev/null
+import json, os, sys
+date, work = sys.argv[1], sys.argv[2]
+m = os.path.join(work, "audio", date, "manifest.json")
+try:
+    d = json.load(open(m, encoding="utf-8"))
+    sys.exit(0 if (d.get("items") and d.get("brief")) else 1)
+except Exception:
+    sys.exit(1)
+PY
+  then
+    gen_ok=1
+    echo "音频生成成功（尝试 $attempt/5）"
+    break
+  fi
+  echo "数据未就绪或生成不完整，等待 90 秒后重试（$attempt/5）..."
+  [ "$attempt" -lt 5 ] && sleep 90
+done
+if [ "$gen_ok" != "1" ]; then
+  echo "GEN_FAILED 数据就绪重试 5 次后仍未生成完整音频"
+  exit 1
+fi
 # 2) 重建 RSS feed
 python "$SCRIPT_DIR/gen_feed.py" || { echo "FEED_FAILED"; exit 1; }
 
@@ -42,7 +69,7 @@ git commit -m "Fallback podcast audio + feed: $TODAY (WorkBuddy local)" >/dev/nu
 
 pushed=0
 for i in 1 2 3 4 5 6; do
-  out=$(git push origin HEAD:main 2>&1)
+  out=$(GIT_HTTP_VERSION=HTTP/1.1 git push origin HEAD:main 2>&1)
   echo "push try $i: $(echo "$out" | tail -1)"
   if echo "$out" | grep -qE "up-to-date|HEAD -> main|main -> main"; then
     pushed=1; break
