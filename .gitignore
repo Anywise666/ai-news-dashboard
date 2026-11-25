@@ -1,0 +1,10 @@
+# 本地 WorkBuddy 项目数据（兜底任务执行记录等），非站点成品，不入库
+.workbuddy/
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+
+# 系统文件
+.DS_Store
+Thumbs.db
