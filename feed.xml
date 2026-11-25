@@ -12,6 +12,18 @@
     <atom:link href="https://anywise666.github.io/ai-news-dashboard/feed.xml" rel="self" type="application/rss+xml" />
     <ttl>60</ttl>
     <item>
+      <title><![CDATA[AI 晨报速览 · 11月25日]]></title>
+      <link>https://anywise666.github.io/ai-news-dashboard/index.html</link>
+      <description><![CDATA[90 秒速览当天 AI 要闻。 今日头条：Claude 推出 Install as app：artifacts 可安装为 Mac 和 Windows 桌面应用 完整日报：https://anywise666.github.io/ai-news-dashboard/index.html]]></description>
+      <guid isPermaLink="false">ai-news-daily-2026-11-25</guid>
+      <pubDate>Wed, 25 Nov 2026 08:30:00 +0800</pubDate>
+      <enclosure url="https://anywise666.github.io/ai-news-dashboard/audio/2026-11-25/brief_zh.mp3" length="363744" type="audio/mpeg" />
+      <itunes:duration>90</itunes:duration>
+      <itunes:title><![CDATA[AI 晨报速览 · 11月25日]]></itunes:title>
+      <itunes:summary><![CDATA[90 秒速览当天 AI 要闻。 今日头条：Claude 推出 Install as app：artifacts 可安装为 Mac 和 Windows 桌面应用 完整日报：https://anywise666.github.io/ai-news-dashboard/index.html]]></itunes:summary>
+      <itunes:episodeType>full</itunes:episodeType>
+    </item>
+    <item>
       <title><![CDATA[AI 晨报速览 · 11月24日]]></title>
       <link>https://anywise666.github.io/ai-news-dashboard/index.html</link>
       <description><![CDATA[90 秒速览当天 AI 要闻。 今日头条：NVIDIA 宣布黄仁勋复任总裁兼 CEO 并重回董事会 完整日报：https://anywise666.github.io/ai-news-dashboard/index.html]]></description>

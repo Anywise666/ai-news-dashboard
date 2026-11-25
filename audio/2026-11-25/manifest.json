@@ -1,0 +1,66 @@
+{
+  "date": "2026-11-25",
+  "generatedAt": "2026-11-25T00:58:14.489112+00:00",
+  "items": {
+    "lead": {
+      "title": "Claude 推出 Install as app：artifacts 可安装为 Mac 和 Windows 桌面应用",
+      "zh": "lead_zh.mp3"
+    },
+    "gflb0kkwzma61spkzpp1uxmrk": {
+      "title": "Cognition 发布 SWE-2.1 及高速版 SWE-2.1 Lightning",
+      "zh": "gflb0kkwzma61spkzpp1uxmrk_zh.mp3",
+      "en": "gflb0kkwzma61spkzpp1uxmrk_en.mp3"
+    },
+    "zcpto4b7qb8sr6v6n223kd2sx": {
+      "title": "Claude 推出 Install as app：artifacts 可安装为 Mac 和 Windows 桌面应用",
+      "zh": "zcpto4b7qb8sr6v6n223kd2sx_zh.mp3",
+      "en": "zcpto4b7qb8sr6v6n223kd2sx_en.mp3"
+    },
+    "kjd2qp2iuk9zxdfqj5qk2a8f9": {
+      "title": "Anthropic 为 Claude 推出 Skills over MCP 公测及 Tasks、Elicitation 等更新",
+      "zh": "kjd2qp2iuk9zxdfqj5qk2a8f9_zh.mp3"
+    },
+    "d41p6k2h48zm8u2kl5xdzqx5h": {
+      "title": "OpenAI 与 Cisco 发布开源 Linux 运行时 Shirudo，让 Agent 无停机防御系统",
+      "zh": "d41p6k2h48zm8u2kl5xdzqx5h_zh.mp3",
+      "en": "d41p6k2h48zm8u2kl5xdzqx5h_en.mp3"
+    },
+    "f1380j6hyrxn0rnz6666nu3b8": {
+      "title": "MiniMax 发布 H3 Family 系列模型，H3 开源百日衍生模型达 1472 个、下载量超 1.48 亿次",
+      "zh": "f1380j6hyrxn0rnz6666nu3b8_zh.mp3"
+    },
+    "zto0pspydy8330r0bvwqb6j5z": {
+      "title": "ChinaTalk 播客：Nvidia 董事会恢复黄仁勋职务，美商务部将 Megaspeed 列入实体清单",
+      "zh": "zto0pspydy8330r0bvwqb6j5z_zh.mp3"
+    },
+    "ygbhvp086wl672gfxuhfgl23x": {
+      "title": "Amazon 报告黑客用开源框架 Cairn 驱动 AI 智能体在约 11 分钟内自主发现并利用 0-day",
+      "zh": "ygbhvp086wl672gfxuhfgl23x_zh.mp3",
+      "en": "ygbhvp086wl672gfxuhfgl23x_en.mp3"
+    },
+    "yz5va6l60tfkmdampmsiz0jq2": {
+      "title": "ChinaTalk 分析 BIS 租赁算力新规或为美国换取约六个月算力领先",
+      "zh": "yz5va6l60tfkmdampmsiz0jq2_zh.mp3"
+    },
+    "vld1kqsp7wkz3o3qo1ubc9sg9": {
+      "title": "OpenAI 发布 preprint：湿实验验证 GPT-6 系列模型具备内在蛋白质设计能力",
+      "zh": "vld1kqsp7wkz3o3qo1ubc9sg9_zh.mp3",
+      "en": "vld1kqsp7wkz3o3qo1ubc9sg9_en.mp3"
+    },
+    "gat7lwf755dyryyd45gvlesxz": {
+      "title": "Anthropic 发布 Siren 评估：Claude 在弱沙盒中 21-32% 场景会越界访问",
+      "zh": "gat7lwf755dyryyd45gvlesxz_zh.mp3",
+      "en": "gat7lwf755dyryyd45gvlesxz_en.mp3"
+    },
+    "frmncgr2jcrvfm3t6jgabqhfh": {
+      "title": "OpenClaw 联合多家机构发布真实任务基准 ShellBench，最强模型完成率约六成",
+      "zh": "frmncgr2jcrvfm3t6jgabqhfh_zh.mp3",
+      "en": "frmncgr2jcrvfm3t6jgabqhfh_en.mp3"
+    },
+    "lb66i6g7eq01l6hx0rr8f7k9r": {
+      "title": "Ed Zitron 撰文批评 NVIDIA 董事会在政府施压下恢复黄仁勋 CEO 职务",
+      "zh": "lb66i6g7eq01l6hx0rr8f7k9r_zh.mp3"
+    }
+  },
+  "brief": "brief_zh.mp3"
+}
