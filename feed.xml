@@ -12,6 +12,18 @@
     <atom:link href="https://anywise666.github.io/ai-news-dashboard/feed.xml" rel="self" type="application/rss+xml" />
     <ttl>60</ttl>
     <item>
+      <title><![CDATA[AI 晨报速览 · 11月26日]]></title>
+      <link>https://anywise666.github.io/ai-news-dashboard/index.html</link>
+      <description><![CDATA[90 秒速览当天 AI 要闻。 今日头条：Anthropic 复盘 Messages API 从 Python 迁移到 Rust 的校验方法 完整日报：https://anywise666.github.io/ai-news-dashboard/index.html]]></description>
+      <guid isPermaLink="false">ai-news-daily-2026-11-26</guid>
+      <pubDate>Thu, 26 Nov 2026 08:30:00 +0800</pubDate>
+      <enclosure url="https://anywise666.github.io/ai-news-dashboard/audio/2026-11-26/brief_zh.mp3" length="411120" type="audio/mpeg" />
+      <itunes:duration>90</itunes:duration>
+      <itunes:title><![CDATA[AI 晨报速览 · 11月26日]]></itunes:title>
+      <itunes:summary><![CDATA[90 秒速览当天 AI 要闻。 今日头条：Anthropic 复盘 Messages API 从 Python 迁移到 Rust 的校验方法 完整日报：https://anywise666.github.io/ai-news-dashboard/index.html]]></itunes:summary>
+      <itunes:episodeType>full</itunes:episodeType>
+    </item>
+    <item>
       <title><![CDATA[AI 晨报速览 · 11月25日]]></title>
       <link>https://anywise666.github.io/ai-news-dashboard/index.html</link>
       <description><![CDATA[90 秒速览当天 AI 要闻。 今日头条：Claude 推出 Install as app：artifacts 可安装为 Mac 和 Windows 桌面应用 完整日报：https://anywise666.github.io/ai-news-dashboard/index.html]]></description>
