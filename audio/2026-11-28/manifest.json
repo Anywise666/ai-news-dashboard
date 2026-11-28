@@ -1,0 +1,25 @@
+{
+  "date": "2026-11-28",
+  "generatedAt": "2026-11-28T00:17:32.902342+00:00",
+  "items": {
+    "lead": {
+      "title": "实测支付宝 SkillPay：手把手教你怎么把 Skill 挂上去卖钱",
+      "zh": "lead_zh.mp3"
+    },
+    "l9md8ugx8e2zlm5g1tuqthmaw": {
+      "title": "OpenBMB 点评 InternLM 基于 MiniCPM-o 4.5 打造的 Sage-Interaction",
+      "zh": "l9md8ugx8e2zlm5g1tuqthmaw_zh.mp3",
+      "en": "l9md8ugx8e2zlm5g1tuqthmaw_en.mp3"
+    },
+    "cdkswjz368inpelrz3f52rekx": {
+      "title": "实测支付宝 SkillPay：手把手教你怎么把 Skill 挂上去卖钱",
+      "zh": "cdkswjz368inpelrz3f52rekx_zh.mp3"
+    },
+    "tiqf353lek6sib8ktn8uvc6nc": {
+      "title": "Antigravity 实用技巧：在 GEMINI.md 加一句话让模型边干活边汇报",
+      "zh": "tiqf353lek6sib8ktn8uvc6nc_zh.mp3",
+      "en": "tiqf353lek6sib8ktn8uvc6nc_en.mp3"
+    }
+  },
+  "brief": "brief_zh.mp3"
+}
